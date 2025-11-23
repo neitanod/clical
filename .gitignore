@@ -1,0 +1,29 @@
+# Binarios
+clical
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Datos locales
+/data/
+
+# Configuración local
+.env
+
+# Go
+*.o
+*.a
+*.test
+*.out
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

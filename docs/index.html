@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>clical - Manual de Usuario</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 2rem auto;
+            gap: 2rem;
+            padding: 0 2rem;
+        }
+
+        aside {
+            width: 280px;
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            position: sticky;
+            top: 2rem;
+            height: fit-content;
+            max-height: calc(100vh - 4rem);
+            overflow-y: auto;
+        }
+
+        aside h2 {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: #667eea;
+        }
+
+        aside ul {
+            list-style: none;
+        }
+
+        aside li {
+            margin-bottom: 0.5rem;
+        }
+
+        aside a {
+            color: #555;
+            text-decoration: none;
+            display: block;
+            padding: 0.5rem;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        aside a:hover {
+            background: #f0f0f0;
+            color: #667eea;
+            padding-left: 1rem;
+        }
+
+        aside a.active {
+            background: #667eea;
+            color: white;
+        }
+
+        main {
+            flex: 1;
+            background: white;
+            border-radius: 8px;
+            padding: 3rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        main h2 {
+            color: #667eea;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            font-size: 2rem;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 0.5rem;
+        }
+
+        main h2:first-child {
+            margin-top: 0;
+        }
+
+        main h3 {
+            color: #764ba2;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            font-size: 1.5rem;
+        }
+
+        main h4 {
+            color: #555;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+            font-size: 1.2rem;
+        }
+
+        main p {
+            margin-bottom: 1rem;
+        }
+
+        main ul, main ol {
+            margin-bottom: 1rem;
+            margin-left: 2rem;
+        }
+
+        main li {
+            margin-bottom: 0.5rem;
+        }
+
+        pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 1.5rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 1rem 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        code {
+            background: #f0f0f0;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+        }
+
+        .note {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+
+        .warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+
+        .success {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+
+        table th {
+            background: #667eea;
+            color: white;
+            padding: 0.75rem;
+            text-align: left;
+        }
+
+        table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #ddd;
+        }
+
+        table tr:hover {
+            background: #f9f9f9;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: #777;
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+            }
+
+            aside {
+                width: 100%;
+                position: static;
+                max-height: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>📅 clical</h1>
+        <p>Sistema de Calendario CLI Multiusuario</p>
+    </header>
+
+    <div class="container">
+        <aside>
+            <h2>📑 Índice</h2>
+            <ul>
+                <li><a href="#introduccion" class="active">Introducción</a></li>
+                <li><a href="#instalacion">Instalación</a></li>
+                <li><a href="#configuracion">Configuración</a></li>
+                <li><a href="#uso-basico">Uso Básico</a></li>
+                <li><a href="#usuarios">Gestión de Usuarios</a></li>
+                <li><a href="#eventos">Gestión de Eventos</a></li>
+                <li><a href="#reportes">Reportes para IA</a></li>
+                <li><a href="#alarmas">Sistema de Alarmas</a></li>
+                <li><a href="#cron">Automatización con Cron</a></li>
+                <li><a href="#archivos">Formato de Archivos</a></li>
+                <li><a href="#ejemplos">Ejemplos Prácticos</a></li>
+                <li><a href="#referencia">Referencia de Comandos</a></li>
+            </ul>
+        </aside>
+
+        <main>
+            <h2 id="introduccion">Introducción</h2>
+
+            <p><strong>clical</strong> es un sistema de calendario multiusuario con interfaz de línea de comandos (CLI), diseñado específicamente para ser asistido por Inteligencia Artificial.</p>
+
+            <h3>Características Principales</h3>
+            <ul>
+                <li>🗓️ <strong>Calendario CLI multiusuario</strong> - Gestión completa de eventos por línea de comandos</li>
+                <li>📝 <strong>Almacenamiento en Markdown + JSON</strong> - Archivos legibles y editables manualmente</li>
+                <li>🤖 <strong>Optimizado para asistencia de IA</strong> - Reportes diseñados para que una IA ayude proactivamente</li>
+                <li>📁 <strong>Organización jerárquica</strong> - Eventos organizados por año/mes/día</li>
+                <li>🔍 <strong>Búsqueda y filtrado</strong> - Potentes capacidades de búsqueda</li>
+                <li>📊 <strong>Reportes inteligentes</strong> - Daily, weekly, upcoming reports</li>
+                <li>⏰ <strong>Compatible con cron</strong> - Ejecución programada de reportes</li>
+            </ul>
+
+            <div class="note">
+                <strong>💡 Filosofía del proyecto:</strong> clical no es un calendario que consultas tú, sino un calendario que una IA consulta para asistirte proactivamente durante tu día.
+            </div>
+
+            <h2 id="instalacion">Instalación</h2>
+
+            <h3>Requisitos</h3>
+            <ul>
+                <li>Go 1.23 o superior</li>
+                <li>Acceso a <code>/var/clical</code> y <code>/etc/clical</code> (o configurar otras rutas)</li>
+            </ul>
+
+            <h3>Instalación desde Código Fuente</h3>
+
+            <pre><code># Clonar repositorio
+git clone https://github.com/sebasvalencia/clical.git
+cd clical
+
+# Compilar
+make build
+
+# Instalar en /usr/local/bin (requiere sudo)
+make install-system</code></pre>
+
+            <h3>Verificar Instalación</h3>
+
+            <pre><code># Ver versión
+clical version
+
+# Ver ayuda
+clical --help</code></pre>
+
+            <div class="success">
+                <strong>✓ Instalación exitosa:</strong> Si ves el mensaje de ayuda, clical está correctamente instalado.
+            </div>
+
+            <h2 id="configuracion">Configuración</h2>
+
+            <h3>Estructura de Configuración</h3>
+
+            <p>clical utiliza un sistema de configuración jerárquico con la siguiente prioridad:</p>
+
+            <ol>
+                <li><strong>Flags CLI</strong> (<code>--data-dir</code>, <code>--user</code>) - Mayor prioridad</li>
+                <li><strong>Variables de entorno</strong> (<code>CLICAL_DATA_DIR</code>, etc.)</li>
+                <li><strong>Archivo de configuración</strong> (<code>/etc/clical/config.env</code>)</li>
+                <li><strong>Defaults del sistema</strong> - Menor prioridad</li>
+            </ol>
+
+            <h3>Archivo de Configuración</h3>
+
+            <p>Ubicación por defecto: <code>/etc/clical/config.env</code></p>
+
+            <pre><code># Configuración de clical
+
+# Directorio base de datos
+CLICAL_DATA_DIR=/var/clical/data
+
+# Usuario por defecto (opcional)
+# CLICAL_USER_ID=12345
+
+# Nivel de logging
+CLICAL_LOG_LEVEL=info</code></pre>
+
+            <h3>Configuración Personalizada</h3>
+
+            <p>Para usar un archivo de configuración diferente:</p>
+
+            <pre><code>clical --config=/ruta/a/mi/config.env COMANDO</code></pre>
+
+            <h3>Estructura de Directorios</h3>
+
+            <pre><code>/var/clical/
+└── data/
+    └── users/
+        └── {user_id}/
+            ├── user.md
+            ├── user.json
+            ├── events/
+            │   └── {año}/
+            │       └── {mes}/
+            │           └── {día}/
+            │               ├── evento.md
+            │               └── evento.json
+            └── .state/
+                └── report-state.json</code></pre>
+
+            <h2 id="uso-basico">Uso Básico</h2>
+
+            <h3>Flujo de Trabajo</h3>
+
+            <ol>
+                <li>Crear un usuario</li>
+                <li>Agregar eventos</li>
+                <li>Listar/ver eventos</li>
+                <li>Generar reportes</li>
+            </ol>
+
+            <h3>Ejemplo Rápido</h3>
+
+            <pre><code># 1. Crear usuario
+clical user add --id=12345 --name="Tu Nombre" --timezone="America/Argentina/Buenos_Aires"
+
+# 2. Agregar evento
+clical add --user=12345 \
+  --datetime="2025-11-21 14:00" \
+  --title="Reunión con cliente" \
+  --duration=60
+
+# 3. Listar eventos de hoy
+clical list --user=12345 --range=today
+
+# 4. Ver reporte diario
+clical daily-report --user=12345</code></pre>
+
+            <h2 id="usuarios">Gestión de Usuarios</h2>
+
+            <h3>Crear Usuario</h3>
+
+            <pre><code>clical user add \
+  --id=12345 \
+  --name="Juan Pérez" \
+  --timezone="America/Argentina/Buenos_Aires"</code></pre>
+
+            <h4>Timezones Comunes</h4>
+
+            <table>
+                <tr>
+                    <th>Región</th>
+                    <th>Timezone</th>
+                </tr>
+                <tr>
+                    <td>Argentina</td>
+                    <td>America/Argentina/Buenos_Aires</td>
+                </tr>
+                <tr>
+                    <td>México</td>
+                    <td>America/Mexico_City</td>
+                </tr>
+                <tr>
+                    <td>España</td>
+                    <td>Europe/Madrid</td>
+                </tr>
+                <tr>
+                    <td>Nueva York</td>
+                    <td>America/New_York</td>
+                </tr>
+                <tr>
+                    <td>UTC</td>
+                    <td>UTC</td>
+                </tr>
+            </table>
+
+            <h3>Listar Usuarios</h3>
+
+            <pre><code>clical user list</code></pre>
+
+            <h3>Ver Detalles de Usuario</h3>
+
+            <pre><code>clical user show --id=12345</code></pre>
+
+            <h2 id="eventos">Gestión de Eventos</h2>
+
+            <h3>Agregar Evento</h3>
+
+            <pre><code># Evento básico
+clical add --user=12345 \
+  --datetime="2025-11-21 09:00" \
+  --title="Stand-up Meeting" \
+  --duration=15
+
+# Evento completo
+clical add --user=12345 \
+  --datetime="2025-11-21 14:00" \
+  --title="Reunión con cliente" \
+  --duration=60 \
+  --location="Oficina Central, Sala 3" \
+  --notes="Revisar propuesta Q4 y discutir timeline" \
+  --tags=trabajo,cliente,importante</code></pre>
+
+            <h3>Listar Eventos</h3>
+
+            <pre><code># Todos los eventos
+clical list --user=12345
+
+# Eventos de hoy
+clical list --user=12345 --range=today
+
+# Eventos de esta semana
+clical list --user=12345 --range=week
+
+# Eventos de este mes
+clical list --user=12345 --range=month
+
+# Rango personalizado
+clical list --user=12345 --from="2025-11-20" --to="2025-11-30"
+
+# Filtrar por tags
+clical list --user=12345 --tags=trabajo,reunion</code></pre>
+
+            <h3>Ver Evento</h3>
+
+            <pre><code>clical show --user=12345 --id=abc123def456</code></pre>
+
+            <h3>Editar Evento</h3>
+
+            <pre><code># Cambiar título
+clical edit --user=12345 --id=abc123 --title="Nuevo título"
+
+# Cambiar fecha/hora
+clical edit --user=12345 --id=abc123 --datetime="2025-11-22 15:00"
+
+# Cambiar duración
+clical edit --user=12345 --id=abc123 --duration=90
+
+# Múltiples cambios
+clical edit --user=12345 --id=abc123 \
+  --title="Reunión actualizada" \
+  --location="Zoom" \
+  --duration=45</code></pre>
+
+            <h3>Eliminar Evento</h3>
+
+            <pre><code># Con confirmación
+clical delete --user=12345 --id=abc123
+
+# Sin confirmación
+clical delete --user=12345 --id=abc123 --force</code></pre>
+
+            <h2 id="reportes">Reportes para IA</h2>
+
+            <h3>Reporte Diario (daily-report)</h3>
+
+            <p>Genera un reporte completo del día con toda la información que una IA necesita para asistirte.</p>
+
+            <pre><code># Reporte de hoy
+clical daily-report --user=12345
+
+# Reporte de una fecha específica
+clical daily-report --user=12345 --date="2025-11-21"</code></pre>
+
+            <h4>Contenido del Reporte Diario</h4>
+
+            <ul>
+                <li>Resumen del día (total eventos, horas ocupadas, tiempo libre)</li>
+                <li>Próximo evento inmediato (con tiempo restante)</li>
+                <li>Agenda completa del día</li>
+                <li>Bloques de tiempo libre</li>
+                <li>Vista previa del día siguiente</li>
+                <li>Sugerencias de la IA</li>
+            </ul>
+
+            <h3>Reporte de Mañana (tomorrow-report)</h3>
+
+            <p>Vista previa del día siguiente. Ideal para ejecutar al final del día.</p>
+
+            <pre><code>clical tomorrow-report --user=12345</code></pre>
+
+            <h3>Reporte de Próximos Eventos (upcoming-report)</h3>
+
+            <p>Muestra los próximos eventos en las siguientes horas.</p>
+
+            <pre><code># Próximos 2 horas (default)
+clical upcoming-report --user=12345
+
+# Próximas 4 horas
+clical upcoming-report --user=12345 --hours=4
+
+# Próximos 5 eventos
+clical upcoming-report --user=12345 --count=5</code></pre>
+
+            <h3>Reporte Semanal (weekly-report)</h3>
+
+            <p>Resumen de toda la semana. Ideal para lunes.</p>
+
+            <pre><code>clical weekly-report --user=12345</code></pre>
+
+            <h2 id="alarmas">Sistema de Alarmas</h2>
+
+            <p>Las alarmas son recordatorios programados que permiten a la IA realizar seguimientos automáticos. Se ejecutan vía cron y pueden ser:</p>
+
+            <ul>
+                <li><strong>One-time:</strong> Se ejecutan una vez en una fecha/hora específica</li>
+                <li><strong>Recurrentes:</strong> Se repiten periódicamente (daily, weekly, monthly, yearly)</li>
+            </ul>
+
+            <h3>Agregar Alarmas</h3>
+
+            <h4>Alarma One-Time</h4>
+
+            <pre><code># Alarma para una fecha/hora específica
+clical alarm add --user=ai-agent --at "2025-11-24 10:00" --context "Revisar PR de autenticación"</code></pre>
+
+            <h4>Alarma Diaria</h4>
+
+            <pre><code># Cada día a la hora especificada
+clical alarm add --user=ai-agent --daily "14:30" --context "Revisar métricas diarias"
+
+# Con fecha de expiración
+clical alarm add --user=ai-agent --daily "09:00" --expires "2025-12-31" --context "Stand-up temporal"</code></pre>
+
+            <h4>Alarma Semanal</h4>
+
+            <pre><code># Cada semana en el día especificado
+clical alarm add --user=ai-agent --weekly "monday 14:30" --context "Reunión semanal"
+clical alarm add --user=ai-agent --weekly "friday 17:00" --context "Reporte semanal"</code></pre>
+
+            <h4>Alarma Mensual</h4>
+
+            <pre><code># Cada mes en el día especificado
+clical alarm add --user=ai-agent --monthly "1 09:00" --context "Reporte mensual"
+clical alarm add --user=ai-agent --monthly "15 14:30" --context "Revisión quincenal"</code></pre>
+
+            <h4>Alarma Anual</h4>
+
+            <pre><code># Cada año en la fecha especificada
+clical alarm add --user=ai-agent --yearly "01-01 00:00" --context "Feliz año nuevo"
+clical alarm add --user=ai-agent --yearly "11-21 10:00" --context "Aniversario del proyecto"</code></pre>
+
+            <h3>Verificar Alarmas</h3>
+
+            <p>Este comando se ejecuta desde cron cada minuto:</p>
+
+            <pre><code># Si no hay alarmas: no produce output
+# Si hay alarmas: emite JSON a stdout
+clical alarm check --user=ai-agent
+
+# Verbose para debugging
+clical alarm check --user=ai-agent --verbose</code></pre>
+
+            <h3>Listar Alarmas</h3>
+
+            <pre><code># Listar alarmas activas
+clical alarm list --user=ai-agent
+
+# Incluir alarmas pasadas
+clical alarm list --user=ai-agent --past
+
+# Output JSON para scripting
+clical alarm list --user=ai-agent --json</code></pre>
+
+            <h3>Cancelar Alarmas</h3>
+
+            <pre><code># Cancelar por ID
+clical alarm cancel --user=ai-agent alarm_once_1234567890_abcd1234</code></pre>
+
+            <h3>Ejemplo de Output JSON</h3>
+
+            <pre><code>[
+  {
+    "id": "alarm_once_1234567890_abcd1234",
+    "scheduled_for": "2025-11-24T10:00:00Z",
+    "context": "Revisar PR de autenticación",
+    "created_at": "2025-11-23T14:00:00Z",
+    "recurrence": "once"
+  },
+  {
+    "id": "alarm_weekly_1234567890_efgh5678",
+    "scheduled_for": "2025-11-24T14:30:00Z",
+    "context": "Reunión semanal",
+    "created_at": "2025-11-20T10:00:00Z",
+    "recurrence": "weekly",
+    "expires_at": "2025-12-31T23:59:59Z"
+  }
+]</code></pre>
+
+            <div class="info">
+                <strong>ℹ️ Recovery Automático:</strong> El comando <code>alarm check</code> recupera automáticamente alarmas perdidas de los últimos 60 minutos.
+            </div>
+
+            <h2 id="cron">Automatización con Cron</h2>
+
+            <h3>Configurar Crontab</h3>
+
+            <pre><code># Editar crontab
+crontab -e</code></pre>
+
+            <h3>Ejemplos de Configuración</h3>
+
+            <h4>Reporte Diario (7:00 AM)</h4>
+
+            <pre><code># Enviar por email
+0 7 * * * /usr/local/bin/clical daily-report --user=12345 | mail -s "Agenda de Hoy" tu@email.com
+
+# Enviar por Telegram (si tienes un bot configurado)
+0 7 * * * OUTPUT=$(/usr/local/bin/clical daily-report --user=12345); [ -n "$OUTPUT" ] && tu-comando-telegram "$OUTPUT"</code></pre>
+
+            <h4>Reporte de Mañana (8:00 PM)</h4>
+
+            <pre><code>0 20 * * * /usr/local/bin/clical tomorrow-report --user=12345 | mail -s "Agenda de Mañana" tu@email.com</code></pre>
+
+            <h4>Alertas Cada Hora (Horario Laboral)</h4>
+
+            <pre><code># De 9 AM a 6 PM, cada hora
+0 9-18 * * * /usr/local/bin/clical upcoming-report --user=12345 --hours=2 | mail -s "Próximos Eventos" tu@email.com</code></pre>
+
+            <h4>Reporte Semanal (Lunes 7:00 AM)</h4>
+
+            <pre><code>0 7 * * 1 /usr/local/bin/clical weekly-report --user=12345 | mail -s "Agenda Semanal" tu@email.com</code></pre>
+
+            <h3>Configuración Completa</h3>
+
+            <pre><code># Editar crontab
+crontab -e
+
+# Agregar las siguientes líneas:
+
+# Reporte diario a las 7:00 AM
+0 7 * * * /usr/local/bin/clical daily-report --user=12345 > /tmp/daily-report.txt
+
+# Reporte de mañana a las 8:00 PM
+0 20 * * * /usr/local/bin/clical tomorrow-report --user=12345 > /tmp/tomorrow-report.txt
+
+# Alertas cada hora durante horario laboral
+0 9-18 * * * /usr/local/bin/clical upcoming-report --user=12345 --hours=2
+
+# Reporte semanal los lunes a las 7:00 AM
+0 7 * * 1 /usr/local/bin/clical weekly-report --user=12345 > /tmp/weekly-report.txt
+
+# Verificación de alarmas cada minuto
+* * * * * /usr/local/bin/clical alarm check --user=ai-agent | /usr/local/bin/process-alarms.sh</code></pre>
+
+            <div class="warning">
+                <strong>⚠️ Importante:</strong> Asegúrate de usar rutas absolutas en crontab (<code>/usr/local/bin/clical</code>) ya que el PATH puede ser diferente.
+            </div>
+
+            <h2 id="archivos">Formato de Archivos</h2>
+
+            <h3>Ubicación de Datos</h3>
+
+            <p>Por defecto: <code>/var/clical/data/users/{user_id}/</code></p>
+
+            <h3>Estructura de Archivos</h3>
+
+            <pre><code>/var/clical/data/users/12345/
+├── user.md              # Info del usuario (Markdown)
+├── user.json            # Metadata del usuario
+├── events/
+│   └── 2025/
+│       └── 11/
+│           └── 21/
+│               ├── 09-00-daily-stand-up.md
+│               ├── 09-00-daily-stand-up.json
+│               ├── 14-00-reunion-con-cliente.md
+│               └── 14-00-reunion-con-cliente.json
+└── .state/
+    └── report-state.json</code></pre>
+
+            <h3>Formato Markdown de Eventos</h3>
+
+            <pre><code># Reunión con cliente
+
+**Fecha:** 2025-11-21
+**Hora:** 14:00
+**Duración:** 60 minutos
+**Ubicación:** Oficina Central
+**Tags:** #trabajo #cliente
+
+## Notas
+
+Revisar propuesta Q4 y discutir timeline de implementación.
+
+## Agenda
+
+- Presentación de propuesta (15 min)
+- Discusión de requerimientos (20 min)
+- Timeline y presupuesto (15 min)
+- Q&A (10 min)
+
+---
+
+*Creado: 2025-11-20 16:18*
+*Actualizado: 2025-11-20 16:18*
+*ID: e36e10014ea57372*</code></pre>
+
+            <h3>Formato JSON de Eventos</h3>
+
+            <pre><code>{
+  "id": "e36e10014ea57372",
+  "user_id": "12345",
+  "datetime": "2025-11-21T14:00:00-03:00",
+  "title": "Reunión con cliente",
+  "duration": 60,
+  "location": "Oficina Central",
+  "notes": "Revisar propuesta Q4...",
+  "tags": ["trabajo", "cliente"],
+  "metadata": {},
+  "created_at": "2025-11-20T16:18:00-03:00",
+  "updated_at": "2025-11-20T16:18:00-03:00"
+}</code></pre>
+
+            <div class="note">
+                <strong>💡 Ventaja:</strong> Puedes editar manualmente los archivos .md con cualquier editor de texto y clical los leerá correctamente.
+            </div>
+
+            <h2 id="ejemplos">Ejemplos Prácticos</h2>
+
+            <h3>Caso 1: Planificar la Semana</h3>
+
+            <pre><code># Lunes por la mañana
+clical weekly-report --user=12345
+
+# Agregar eventos de la semana
+clical add --user=12345 --datetime="2025-11-24 10:00" \
+  --title="Sprint Planning" --duration=120 --tags=scrum
+
+clical add --user=12345 --datetime="2025-11-25 15:00" \
+  --title="Code Review" --duration=60 --tags=desarrollo
+
+# Ver agenda de hoy
+clical daily-report --user=12345</code></pre>
+
+            <h3>Caso 2: Agregar Evento Rápido</h3>
+
+            <pre><code># Reunión en 2 horas
+clical add --user=12345 \
+  --datetime="$(date -d '+2 hours' '+%Y-%m-%d %H:00')" \
+  --title="Llamada urgente" \
+  --duration=30</code></pre>
+
+            <h3>Caso 3: Buscar Eventos</h3>
+
+            <pre><code># Todos los eventos con "cliente"
+clical list --user=12345 | grep -i cliente
+
+# Eventos de trabajo esta semana
+clical list --user=12345 --range=week --tags=trabajo</code></pre>
+
+            <h2 id="referencia">Referencia de Comandos</h2>
+
+            <h3>Comandos Disponibles</h3>
+
+            <table>
+                <tr>
+                    <th>Comando</th>
+                    <th>Descripción</th>
+                </tr>
+                <tr>
+                    <td><code>user add</code></td>
+                    <td>Crear nuevo usuario</td>
+                </tr>
+                <tr>
+                    <td><code>user list</code></td>
+                    <td>Listar usuarios</td>
+                </tr>
+                <tr>
+                    <td><code>user show</code></td>
+                    <td>Ver detalles de usuario</td>
+                </tr>
+                <tr>
+                    <td><code>add</code></td>
+                    <td>Agregar evento</td>
+                </tr>
+                <tr>
+                    <td><code>list</code></td>
+                    <td>Listar eventos</td>
+                </tr>
+                <tr>
+                    <td><code>show</code></td>
+                    <td>Ver evento</td>
+                </tr>
+                <tr>
+                    <td><code>edit</code></td>
+                    <td>Editar evento</td>
+                </tr>
+                <tr>
+                    <td><code>delete</code></td>
+                    <td>Eliminar evento</td>
+                </tr>
+                <tr>
+                    <td><code>daily-report</code></td>
+                    <td>Reporte diario</td>
+                </tr>
+                <tr>
+                    <td><code>tomorrow-report</code></td>
+                    <td>Reporte de mañana</td>
+                </tr>
+                <tr>
+                    <td><code>upcoming-report</code></td>
+                    <td>Próximos eventos</td>
+                </tr>
+                <tr>
+                    <td><code>weekly-report</code></td>
+                    <td>Reporte semanal</td>
+                </tr>
+                <tr>
+                    <td><code>version</code></td>
+                    <td>Ver versión</td>
+                </tr>
+            </table>
+
+            <h3>Flags Globales</h3>
+
+            <table>
+                <tr>
+                    <th>Flag</th>
+                    <th>Descripción</th>
+                    <th>Default</th>
+                </tr>
+                <tr>
+                    <td><code>--config</code></td>
+                    <td>Archivo de configuración</td>
+                    <td>/etc/clical/config.env</td>
+                </tr>
+                <tr>
+                    <td><code>--data-dir</code></td>
+                    <td>Directorio de datos</td>
+                    <td>/var/clical/data</td>
+                </tr>
+                <tr>
+                    <td><code>--user</code></td>
+                    <td>ID de usuario</td>
+                    <td>(requerido)</td>
+                </tr>
+            </table>
+
+            <h3>Variables de Entorno</h3>
+
+            <table>
+                <tr>
+                    <th>Variable</th>
+                    <th>Descripción</th>
+                </tr>
+                <tr>
+                    <td><code>CLICAL_DATA_DIR</code></td>
+                    <td>Directorio de datos</td>
+                </tr>
+                <tr>
+                    <td><code>CLICAL_USER_ID</code></td>
+                    <td>Usuario por defecto</td>
+                </tr>
+                <tr>
+                    <td><code>CLICAL_LOG_LEVEL</code></td>
+                    <td>Nivel de logging (debug, info, warn, error)</td>
+                </tr>
+            </table>
+
+            <div class="success">
+                <strong>✓ ¡Listo para usar clical!</strong> Comienza creando tu primer usuario y agregando eventos.
+            </div>
+
+        </main>
+    </div>
+
+    <footer>
+        <p>&copy; 2025 clical - Sistema de Calendario CLI Multiusuario</p>
+        <p>Desarrollado por Sebastián Valencia con asistencia de Claude (Anthropic)</p>
+    </footer>
+
+    <script>
+        // Smooth scroll para links del índice
+        document.querySelectorAll('aside a').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+
+                // Actualizar clase active
+                document.querySelectorAll('aside a').forEach(l => l.classList.remove('active'));
+                this.classList.add('active');
+
+                // Scroll suave
+                const target = document.querySelector(this.getAttribute('href'));
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        });
+
+        // Actualizar active link al hacer scroll
+        window.addEventListener('scroll', function() {
+            let current = '';
+            document.querySelectorAll('main h2[id]').forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (scrollY >= sectionTop - 100) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            document.querySelectorAll('aside a').forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === '#' + current) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
