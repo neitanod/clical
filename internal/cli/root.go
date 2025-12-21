@@ -20,18 +20,18 @@ var (
 // rootCmd es el comando raíz
 var rootCmd = &cobra.Command{
 	Use:   "clical",
-	Short: "Sistema de calendario multiusuario CLI",
-	Long: `clical es un sistema de calendario multiusuario con interfaz de línea de comandos,
-diseñado para ser asistido por Inteligencia Artificial.
+	Short: "Multi-user calendar CLI system",
+	Long: `clical is a multi-user calendar system with command line interface,
+designed for AI assistance.
 
-Los datos se almacenan en archivos Markdown + JSON, organizados por fecha,
-lo que permite navegar y editar manualmente los eventos.`,
+Data is stored in Markdown + JSON files, organized by date,
+which allows manual navigation and editing of events.`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		// Cargar configuración desde archivo
 		var err error
 		cfg, err = config.LoadConfig(configPath)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error cargando configuración: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Error loading configuration: %v\n", err)
 			os.Exit(1)
 		}
 
@@ -52,7 +52,7 @@ lo que permite navegar y editar manualmente los eventos.`,
 		// Inicializar storage
 		store, err = storage.NewFilesystemStorage(cfg.DataDir)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error inicializando storage: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Error initializing storage: %v\n", err)
 			os.Exit(1)
 		}
 	},
@@ -65,9 +65,9 @@ func Execute() error {
 
 func init() {
 	// Flags globales
-	rootCmd.PersistentFlags().StringVar(&configPath, "config", "/etc/clical/config.env", "Archivo de configuración")
-	rootCmd.PersistentFlags().StringVar(&dataDir, "data-dir", "", "Directorio de datos (sobrescribe config)")
-	rootCmd.PersistentFlags().StringVar(&userID, "user", "", "ID de usuario (sobrescribe config)")
+	rootCmd.PersistentFlags().StringVar(&configPath, "config", "/etc/clical/config.env", "Configuration file")
+	rootCmd.PersistentFlags().StringVar(&dataDir, "data-dir", "", "Data directory (overrides config)")
+	rootCmd.PersistentFlags().StringVar(&userID, "user", "", "User ID (overrides config)")
 
 	// Agregar subcomandos
 	rootCmd.AddCommand(addCmd)

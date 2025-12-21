@@ -20,49 +20,49 @@ var (
 
 var addCmd = &cobra.Command{
 	Use:   "add",
-	Short: "Agregar un nuevo evento al calendario",
-	Long: `Agrega un nuevo evento al calendario del usuario especificado.
+	Short: "Add a new event to the calendar",
+	Long: `Add a new event to the specified user's calendar.
 
-Ejemplos:
-  clical add --user=12345 --datetime="2025-11-20 14:00" --title="Reunión" --duration=60
-  clical add --user=12345 --datetime="2025-11-20 14:00" --title="Llamada" --duration=30 --location="Zoom"
-  clical add --user=12345 --datetime="2025-11-21 09:00" --title="Stand-up" --duration=15 --tags=trabajo,equipo`,
+Examples:
+  clical add --user=12345 --datetime="2025-11-20 14:00" --title="Meeting" --duration=60
+  clical add --user=12345 --datetime="2025-11-20 14:00" --title="Call" --duration=30 --location="Zoom"
+  clical add --user=12345 --datetime="2025-11-21 09:00" --title="Stand-up" --duration=15 --tags=work,team`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// Validar user ID
+		// Validate user ID
 		if userID == "" {
-			return fmt.Errorf("se requiere --user")
+			return fmt.Errorf("--user is required")
 		}
 
-		// Validar título
+		// Validate title
 		if addTitle == "" {
-			return fmt.Errorf("se requiere --title")
+			return fmt.Errorf("--title is required")
 		}
 
-		// Parsear datetime
+		// Parse datetime
 		datetime, err := parseDateTime(addDatetime)
 		if err != nil {
-			return fmt.Errorf("error parseando --datetime: %w", err)
+			return fmt.Errorf("error parsing --datetime: %w", err)
 		}
 
-		// Crear entrada
+		// Create entry
 		entry := calendar.NewEntry(userID, addTitle, datetime, addDuration)
 		entry.Location = addLocation
 		entry.Notes = addNotes
 		entry.Tags = addTags
 
-		// Guardar
+		// Save
 		if err := store.SaveEntry(userID, entry); err != nil {
-			return fmt.Errorf("error guardando entrada: %w", err)
+			return fmt.Errorf("error saving entry: %w", err)
 		}
 
-		// Mostrar confirmación
-		fmt.Printf("✓ Evento creado exitosamente\n\n")
+		// Show confirmation
+		fmt.Printf("✓ Event created successfully\n\n")
 		fmt.Printf("ID:       %s\n", entry.ID)
-		fmt.Printf("Título:   %s\n", entry.Title)
-		fmt.Printf("Fecha:    %s\n", entry.DateTime.Format("2006-01-02 15:04"))
-		fmt.Printf("Duración: %d minutos\n", entry.Duration)
+		fmt.Printf("Title:    %s\n", entry.Title)
+		fmt.Printf("Date:     %s\n", entry.DateTime.Format("2006-01-02 15:04"))
+		fmt.Printf("Duration: %d minutes\n", entry.Duration)
 		if entry.Location != "" {
-			fmt.Printf("Ubicación: %s\n", entry.Location)
+			fmt.Printf("Location: %s\n", entry.Location)
 		}
 		if len(entry.Tags) > 0 {
 			fmt.Printf("Tags:     %s\n", strings.Join(entry.Tags, ", "))
@@ -73,18 +73,18 @@ Ejemplos:
 }
 
 func init() {
-	addCmd.Flags().StringVar(&addDatetime, "datetime", "", "Fecha y hora del evento (YYYY-MM-DD HH:MM)")
-	addCmd.Flags().StringVar(&addTitle, "title", "", "Título del evento")
-	addCmd.Flags().IntVar(&addDuration, "duration", 60, "Duración en minutos")
-	addCmd.Flags().StringVar(&addLocation, "location", "", "Ubicación del evento")
-	addCmd.Flags().StringVar(&addNotes, "notes", "", "Notas adicionales")
-	addCmd.Flags().StringSliceVar(&addTags, "tags", []string{}, "Tags (separados por coma)")
+	addCmd.Flags().StringVar(&addDatetime, "datetime", "", "Event date and time (YYYY-MM-DD HH:MM)")
+	addCmd.Flags().StringVar(&addTitle, "title", "", "Event title")
+	addCmd.Flags().IntVar(&addDuration, "duration", 60, "Duration in minutes")
+	addCmd.Flags().StringVar(&addLocation, "location", "", "Event location")
+	addCmd.Flags().StringVar(&addNotes, "notes", "", "Additional notes")
+	addCmd.Flags().StringSliceVar(&addTags, "tags", []string{}, "Tags (comma-separated)")
 
 	addCmd.MarkFlagRequired("datetime")
 	addCmd.MarkFlagRequired("title")
 }
 
-// parseDateTime parsea una fecha/hora en formato "YYYY-MM-DD HH:MM"
+// parseDateTime parses a date/time in "YYYY-MM-DD HH:MM" format
 func parseDateTime(s string) (time.Time, error) {
 	formats := []string{
 		"2006-01-02 15:04",
@@ -93,12 +93,15 @@ func parseDateTime(s string) (time.Time, error) {
 		"2006-01-02T15:04:05",
 	}
 
+	// Use local timezone for parsing
+	loc := time.Now().Location()
+
 	for _, format := range formats {
-		t, err := time.Parse(format, s)
+		t, err := time.ParseInLocation(format, s, loc)
 		if err == nil {
 			return t, nil
 		}
 	}
 
-	return time.Time{}, fmt.Errorf("formato inválido (use YYYY-MM-DD HH:MM)")
+	return time.Time{}, fmt.Errorf("invalid format (use YYYY-MM-DD HH:MM)")
 }

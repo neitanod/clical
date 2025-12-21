@@ -65,7 +65,7 @@ func (a *Alarm) Validate() error {
 		return fmt.Errorf("expires_at not allowed for one-time alarms")
 	}
 
-	// ExpiresAt debe ser futura
+	// ExpiresAt must be in the future
 	if a.ExpiresAt != nil && a.ExpiresAt.Before(time.Now()) {
 		return fmt.Errorf("expires_at must be in the future")
 	}

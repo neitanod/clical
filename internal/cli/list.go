@@ -18,25 +18,38 @@ var (
 
 var listCmd = &cobra.Command{
 	Use:   "list",
-	Short: "Listar eventos del calendario",
-	Long: `Lista eventos del calendario con filtros opcionales.
+	Short: "List calendar events",
+	Long: `List calendar events with optional filters.
 
-Ejemplos:
+Available ranges:
+  today          - Today
+  yesterday      - Yesterday
+  48             - Yesterday + today (48 hours)
+  week           - Next 7 days
+  past-week      - Last 7 days
+  month          - Until end of month
+  past-month     - Last 30 days
+  month-to-date  - From start of month until today
+  year-to-date   - From start of year until today
+
+Examples:
   clical list --user=12345
   clical list --user=12345 --from="2025-11-20"
   clical list --user=12345 --range=today
-  clical list --user=12345 --range=week
+  clical list --user=12345 --range=yesterday
+  clical list --user=12345 --range=48
+  clical list --user=12345 --range=month-to-date
   clical list --user=12345 --tags=trabajo,reunion`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// Validar user ID
+		// Validate user ID
 		if userID == "" {
-			return fmt.Errorf("se requiere --user")
+			return fmt.Errorf("--user is required")
 		}
 
-		// Construir filtro
+		// Build filter
 		filter := calendar.NewFilter()
 
-		// Aplicar rango predefinido
+		// Apply predefined range
 		if listRange != "" {
 			from, to, err := parseRange(listRange)
 			if err != nil {
@@ -46,11 +59,11 @@ Ejemplos:
 			filter.To = &to
 		}
 
-		// Aplicar from/to manual (sobrescribe range)
+		// Apply manual from/to (overrides range)
 		if listFrom != "" {
 			from, err := time.Parse("2006-01-02", listFrom)
 			if err != nil {
-				return fmt.Errorf("error parseando --from: %w", err)
+				return fmt.Errorf("error parsing --from: %w", err)
 			}
 			filter.From = &from
 		}
@@ -58,31 +71,31 @@ Ejemplos:
 		if listTo != "" {
 			to, err := time.Parse("2006-01-02", listTo)
 			if err != nil {
-				return fmt.Errorf("error parseando --to: %w", err)
+				return fmt.Errorf("error parsing --to: %w", err)
 			}
-			// Incluir todo el día final
+			// Include entire final day
 			to = to.Add(24 * time.Hour)
 			filter.To = &to
 		}
 
-		// Aplicar tags
+		// Apply tags
 		if len(listTags) > 0 {
 			filter.Tags = listTags
 		}
 
-		// Obtener eventos
+		// Get events
 		entries, err := store.ListEntries(userID, filter)
 		if err != nil {
-			return fmt.Errorf("error listando eventos: %w", err)
+			return fmt.Errorf("error listing eventos: %w", err)
 		}
 
-		// Mostrar resultados
+		// Show results
 		if len(entries) == 0 {
-			fmt.Println("No se encontraron eventos")
+			fmt.Println("No events found")
 			return nil
 		}
 
-		fmt.Printf("Se encontraron %d evento(s)\n\n", len(entries))
+		fmt.Printf("Found %d event(s)\n\n", len(entries))
 
 		for _, entry := range entries {
 			printEntryRow(entry)
@@ -94,32 +107,58 @@ Ejemplos:
 }
 
 func init() {
-	listCmd.Flags().StringVar(&listFrom, "from", "", "Fecha inicial (YYYY-MM-DD)")
-	listCmd.Flags().StringVar(&listTo, "to", "", "Fecha final (YYYY-MM-DD)")
-	listCmd.Flags().StringVar(&listRange, "range", "", "Rango predefinido: today, week, month")
-	listCmd.Flags().StringSliceVar(&listTags, "tags", []string{}, "Filtrar por tags")
+	listCmd.Flags().StringVar(&listFrom, "from", "", "Start date (YYYY-MM-DD)")
+	listCmd.Flags().StringVar(&listTo, "to", "", "End date (YYYY-MM-DD)")
+	listCmd.Flags().StringVar(&listRange, "range", "", "Predefined range: today, yesterday, 48, week, past-week, month, past-month, month-to-date, year-to-date")
+	listCmd.Flags().StringSliceVar(&listTags, "tags", []string{}, "Filter by tags")
 }
 
 // parseRange parsea rangos predefinidos como "today", "week", "month"
 func parseRange(r string) (time.Time, time.Time, error) {
 	now := time.Now()
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	yesterday := today.Add(-24 * time.Hour)
 
 	switch r {
 	case "today":
 		return today, today.Add(24 * time.Hour), nil
 
+	case "yesterday":
+		return yesterday, today, nil
+
+	case "48":
+		// Yesterday + today (48 hours)
+		return yesterday, today.Add(24 * time.Hour), nil
+
 	case "week":
-		// Desde hoy hasta dentro de 7 días
+		// From today for next 7 days
 		return today, today.Add(7 * 24 * time.Hour), nil
 
+	case "past-week":
+		// Last 7 days (including today)
+		return today.Add(-7 * 24 * time.Hour), today.Add(24 * time.Hour), nil
+
 	case "month":
-		// Desde hoy hasta fin de mes
+		// From today until end of month
 		endOfMonth := time.Date(now.Year(), now.Month()+1, 0, 23, 59, 59, 0, now.Location())
 		return today, endOfMonth, nil
 
+	case "past-month":
+		// Last 30 days (including today)
+		return today.Add(-30 * 24 * time.Hour), today.Add(24 * time.Hour), nil
+
+	case "month-to-date":
+		// From start of current month until today
+		startOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+		return startOfMonth, today.Add(24 * time.Hour), nil
+
+	case "year-to-date":
+		// From start of year until today
+		startOfYear := time.Date(now.Year(), 1, 1, 0, 0, 0, 0, now.Location())
+		return startOfYear, today.Add(24 * time.Hour), nil
+
 	default:
-		return time.Time{}, time.Time{}, fmt.Errorf("rango inválido: %s (use: today, week, month)", r)
+		return time.Time{}, time.Time{}, fmt.Errorf("invalid range: %s (use: today, yesterday, 48, week, past-week, month, past-month, month-to-date, year-to-date)", r)
 	}
 }
 

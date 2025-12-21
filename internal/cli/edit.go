@@ -18,29 +18,29 @@ var (
 
 var editCmd = &cobra.Command{
 	Use:   "edit",
-	Short: "Editar un evento existente",
+	Short: "Edit an existing event",
 	Long: `Modifica los campos de un evento existente.
 
-Ejemplos:
+Examples:
   clical edit --user=12345 --id=abc123 --title="Nuevo título"
   clical edit --user=12345 --id=abc123 --datetime="2025-11-21 15:00"
   clical edit --user=12345 --id=abc123 --duration=90 --location="Sala 2"`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// Validar argumentos
+		// Validate arguments
 		if userID == "" {
-			return fmt.Errorf("se requiere --user")
+			return fmt.Errorf("--user is required")
 		}
 		if editID == "" {
-			return fmt.Errorf("se requiere --id")
+			return fmt.Errorf("--id is required")
 		}
 
-		// Obtener evento existente
+		// Get existing event
 		entry, err := store.GetEntry(userID, editID)
 		if err != nil {
-			return fmt.Errorf("error obteniendo evento: %w", err)
+			return fmt.Errorf("error getting event: %w", err)
 		}
 
-		// Aplicar cambios
+		// Apply changes
 		modified := false
 
 		if cmd.Flags().Changed("title") {
@@ -51,7 +51,7 @@ Ejemplos:
 		if cmd.Flags().Changed("datetime") {
 			datetime, err := parseDateTime(editDatetime)
 			if err != nil {
-				return fmt.Errorf("error parseando --datetime: %w", err)
+				return fmt.Errorf("error parsing --datetime: %w", err)
 			}
 			entry.DateTime = datetime
 			modified = true
@@ -79,16 +79,16 @@ Ejemplos:
 		// Actualizar timestamp
 		entry.UpdatedAt = time.Now()
 
-		// Guardar
+		// Save
 		if err := store.UpdateEntry(userID, entry); err != nil {
-			return fmt.Errorf("error actualizando evento: %w", err)
+			return fmt.Errorf("error updating evento: %w", err)
 		}
 
-		fmt.Printf("✓ Evento actualizado exitosamente\n\n")
+		fmt.Printf("✓ Event updated successfully\n\n")
 		fmt.Printf("ID:       %s\n", entry.ID)
 		fmt.Printf("Título:   %s\n", entry.Title)
 		fmt.Printf("Fecha:    %s\n", entry.DateTime.Format("2006-01-02 15:04"))
-		fmt.Printf("Duración: %d minutos\n", entry.Duration)
+		fmt.Printf("Duration: %d minutes\n", entry.Duration)
 		if entry.Location != "" {
 			fmt.Printf("Ubicación: %s\n", entry.Location)
 		}

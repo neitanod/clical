@@ -203,54 +203,54 @@ func generateSuggestions(today, tomorrow []*calendar.Entry) []string {
 func FormatDailyReport(report *DailyReport) string {
 	var md strings.Builder
 
-	// Fecha en español
-	weekdays := []string{"Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"}
-	months := []string{"", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"}
+	// Date formatting
+	weekdays := []string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
+	months := []string{"", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"}
 
 	weekday := weekdays[report.Date.Weekday()]
 	month := months[report.Date.Month()]
 
-	md.WriteString(fmt.Sprintf("# Reporte Diario: %s %d de %s, %d\n\n",
+	md.WriteString(fmt.Sprintf("# Daily Report: %s %d de %s, %d\n\n",
 		weekday, report.Date.Day(), month, report.Date.Year()))
 
 	// Resumen
-	md.WriteString("## Resumen del Día\n\n")
-	md.WriteString(fmt.Sprintf("- **Eventos totales:** %d\n", report.Summary.TotalEvents))
-	md.WriteString(fmt.Sprintf("- **Horas ocupadas:** %.1f horas\n", report.Summary.TotalHours))
+	md.WriteString("## Day Summary\n\n")
+	md.WriteString(fmt.Sprintf("- **Total events:** %d\n", report.Summary.TotalEvents))
+	md.WriteString(fmt.Sprintf("- **Busy hours:** %.1f horas\n", report.Summary.TotalHours))
 
 	if report.Summary.FirstEvent != nil {
-		md.WriteString(fmt.Sprintf("- **Primer evento:** %s\n", report.Summary.FirstEvent.Format("15:04")))
+		md.WriteString(fmt.Sprintf("- **First event:** %s\n", report.Summary.FirstEvent.Format("15:04")))
 	}
 	if report.Summary.LastEvent != nil {
-		md.WriteString(fmt.Sprintf("- **Último evento:** %s\n", report.Summary.LastEvent.Format("15:04")))
+		md.WriteString(fmt.Sprintf("- **Last event:** %s\n", report.Summary.LastEvent.Format("15:04")))
 	}
-	md.WriteString(fmt.Sprintf("- **Tiempo libre:** %.1f horas\n", report.Summary.FreeHours))
+	md.WriteString(fmt.Sprintf("- **Free time:** %.1f horas\n", report.Summary.FreeHours))
 	md.WriteString("\n")
 
 	// Próximo evento
 	if report.Summary.NextEvent != nil {
-		md.WriteString(fmt.Sprintf("### 🔴 PRÓXIMO (en %d minutos)\n\n", report.Summary.MinutesToNext))
+		md.WriteString(fmt.Sprintf("### 🔴 NEXT (in %d minutes)\n\n", report.Summary.MinutesToNext))
 		md.WriteString(fmt.Sprintf("**[%s - %s] %s**\n",
 			report.Summary.NextEvent.DateTime.Format("15:04"),
 			report.Summary.NextEvent.EndTime().Format("15:04"),
 			report.Summary.NextEvent.Title))
 		md.WriteString(fmt.Sprintf("- ID: %s\n", report.Summary.NextEvent.ID))
-		md.WriteString(fmt.Sprintf("- Duración: %d min\n", report.Summary.NextEvent.Duration))
+		md.WriteString(fmt.Sprintf("- Duration: %d min\n", report.Summary.NextEvent.Duration))
 		if report.Summary.NextEvent.Location != "" {
-			md.WriteString(fmt.Sprintf("- Ubicación: %s\n", report.Summary.NextEvent.Location))
+			md.WriteString(fmt.Sprintf("- Location: %s\n", report.Summary.NextEvent.Location))
 		}
 		if len(report.Summary.NextEvent.Tags) > 0 {
 			md.WriteString(fmt.Sprintf("- Tags: #%s\n", strings.Join(report.Summary.NextEvent.Tags, " #")))
 		}
 		if report.Summary.NextEvent.Notes != "" {
-			md.WriteString(fmt.Sprintf("- Notas: %s\n", report.Summary.NextEvent.Notes))
+			md.WriteString(fmt.Sprintf("- Notes: %s\n", report.Summary.NextEvent.Notes))
 		}
 		md.WriteString("\n")
 	}
 
 	// Agenda del día
 	if len(report.Events) > 0 {
-		md.WriteString("## Agenda de Hoy\n\n")
+		md.WriteString("## Today's Agenda\n\n")
 
 		for _, event := range report.Events {
 			md.WriteString(fmt.Sprintf("**[%s - %s] %s**\n",
@@ -259,10 +259,10 @@ func FormatDailyReport(report *DailyReport) string {
 				event.Title))
 
 			md.WriteString(fmt.Sprintf("- ID: %s\n", event.ID))
-			md.WriteString(fmt.Sprintf("- Duración: %d min\n", event.Duration))
+			md.WriteString(fmt.Sprintf("- Duration: %d min\n", event.Duration))
 
 			if event.Location != "" {
-				md.WriteString(fmt.Sprintf("- Ubicación: %s\n", event.Location))
+				md.WriteString(fmt.Sprintf("- Location: %s\n", event.Location))
 			}
 
 			if len(event.Tags) > 0 {
@@ -270,19 +270,19 @@ func FormatDailyReport(report *DailyReport) string {
 			}
 
 			if event.Notes != "" {
-				md.WriteString(fmt.Sprintf("- Notas: %s\n", event.Notes))
+				md.WriteString(fmt.Sprintf("- Notes: %s\n", event.Notes))
 			}
 
 			md.WriteString("\n")
 		}
 	} else {
-		md.WriteString("## Agenda de Hoy\n\n")
+		md.WriteString("## Today's Agenda\n\n")
 		md.WriteString("No hay eventos programados para hoy.\n\n")
 	}
 
 	// Bloques libres
 	if len(report.FreetimeBlocks) > 0 {
-		md.WriteString("## Bloques de Tiempo Libre\n\n")
+		md.WriteString("## Free Time Blocks\n\n")
 		for _, block := range report.FreetimeBlocks {
 			md.WriteString(fmt.Sprintf("- %s - %s (%d min) - ",
 				block.Start.Format("15:04"),

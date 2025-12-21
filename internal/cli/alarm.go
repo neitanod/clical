@@ -3,6 +3,7 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -13,8 +14,8 @@ import (
 
 var alarmCmd = &cobra.Command{
 	Use:   "alarm",
-	Short: "Gestionar alarmas",
-	Long:  `Gestiona alarmas para recordatorios y seguimientos programados.`,
+	Short: "Manage alarms",
+	Long:  `Manage alarms for reminders and scheduled follow-ups.`,
 }
 
 // alarm-add variables
@@ -29,11 +30,12 @@ var (
 )
 
 var alarmAddCmd = &cobra.Command{
-	Use:   "add",
-	Short: "Agregar una nueva alarma",
-	Long: `Agrega una nueva alarma (one-time o recurrente).
+	Use:          "add",
+	Short:        "Add a new alarm",
+	SilenceUsage: true,
+	Long: `Add a new alarm (one-time or recurring).
 
-Ejemplos:
+Examples:
   # One-time
   clical alarm add --user alice --at "2025-11-23 14:30" --context "Revisar PR"
   clical alarm add --user alice --at "tomorrow 10:00" --context "Llamar cliente"
@@ -56,11 +58,11 @@ Ejemplos:
   clical alarm add --user alice --yearly "11-21 10:00" --context "Aniversario del proyecto"`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if userID == "" {
-			return fmt.Errorf("se requiere --user")
+			return fmt.Errorf("--user is required")
 		}
 
 		if alarmContext == "" {
-			return fmt.Errorf("se requiere --context")
+			return fmt.Errorf("--context is required")
 		}
 
 		// Determinar tipo de alarma
@@ -76,96 +78,97 @@ Ejemplos:
 			return addYearlyAlarm(userID, alarmYearly, alarmContext, alarmExpires)
 		}
 
-		return fmt.Errorf("debe especificar --at, --daily, --weekly, --monthly o --yearly")
+		return fmt.Errorf("must specify --at, --daily, --weekly, --monthly or --yearly")
 	},
 }
 
 func addOneTimeAlarm(userID, atStr, context string) error {
-	// Parsear fecha/hora
+	// Parse date/time
 	alarmTime, err := parseDateTime(atStr)
 	if err != nil {
-		return fmt.Errorf("error parseando --at: %w", err)
+		return fmt.Errorf("error parsing --at: %w", err)
 	}
 
-	// Verificar que sea futura
+	// Verify it's in the future
 	if alarmTime.Before(time.Now()) {
-		return fmt.Errorf("la fecha/hora debe ser futura")
+		printRedError("date/time must be in the future")
+		os.Exit(1)
 	}
 
-	// Redondear a minuto
+	// Round to minute
 	alarmTime = alarm.RoundToMinute(alarmTime)
 
-	// Crear alarma
+	// Create alarm
 	alm := alarm.NewAlarm(context, alarm.RecurrenceOnce)
 
-	// Guardar
+	// Save
 	filename := alarm.OneTimeFilename(alarmTime)
 	if err := store.SaveAlarm(userID, alarmTime, alarm.RecurrenceOnce, filename, alm); err != nil {
-		return fmt.Errorf("error guardando alarma: %w", err)
+		return fmt.Errorf("error saving alarm: %w", err)
 	}
 
-	fmt.Printf("✓ Alarma creada exitosamente\n\n")
+	fmt.Printf("✓ Alarm created successfully\n\n")
 	fmt.Printf("ID:         %s\n", alm.ID)
-	fmt.Printf("Tipo:       one-time\n")
-	fmt.Printf("Programada: %s\n", alarmTime.Format("2006-01-02 15:04"))
-	fmt.Printf("Contexto:   %s\n", context)
+	fmt.Printf("Type:       one-time\n")
+	fmt.Printf("Scheduled: %s\n", alarmTime.Format("2006-01-02 15:04"))
+	fmt.Printf("Context:   %s\n", context)
 
 	return nil
 }
 
 func addDailyAlarm(userID, timeStr, context, expiresStr string) error {
-	// Parsear hora (HH:MM)
+	// Parse time (HH:MM)
 	parts := strings.Split(timeStr, ":")
 	if len(parts) != 2 {
-		return fmt.Errorf("formato inválido para --daily (debe ser HH:MM)")
+		return fmt.Errorf("invalid format for --daily (must be HH:MM)")
 	}
 
 	hour, err := strconv.Atoi(parts[0])
 	if err != nil || hour < 0 || hour > 23 {
-		return fmt.Errorf("hora inválida: %s", parts[0])
+		return fmt.Errorf("invalid hour: %s", parts[0])
 	}
 
 	minute, err := strconv.Atoi(parts[1])
 	if err != nil || minute < 0 || minute > 59 {
-		return fmt.Errorf("minuto inválido: %s", parts[1])
+		return fmt.Errorf("invalid minute: %s", parts[1])
 	}
 
-	// Crear alarma
+	// Create alarm
 	alm := alarm.NewAlarm(context, alarm.RecurrenceDaily)
 
-	// Agregar expiración si se especificó
+	// Add expiration if specified
 	if expiresStr != "" {
 		expiresAt, err := parseDateTime(expiresStr)
 		if err != nil {
-			return fmt.Errorf("error parseando --expires: %w", err)
+			return fmt.Errorf("error parsing --expires: %w", err)
 		}
 		alm.ExpiresAt = &expiresAt
 	}
 
-	// Guardar
+	// Save
 	schedule := alarm.DailySchedule{Hour: hour, Minute: minute}
 	filename := schedule.Filename()
 	if err := store.SaveAlarm(userID, time.Now(), alarm.RecurrenceDaily, filename, alm); err != nil {
-		return fmt.Errorf("error guardando alarma: %w", err)
+		return fmt.Errorf("error saving alarm: %w", err)
 	}
 
-	fmt.Printf("✓ Alarma creada exitosamente\n\n")
+	fmt.Printf("✓ Alarm created successfully\n\n")
 	fmt.Printf("ID:         %s\n", alm.ID)
-	fmt.Printf("Tipo:       daily\n")
-	fmt.Printf("Hora:       %02d:%02d\n", hour, minute)
-	fmt.Printf("Contexto:   %s\n", context)
+	fmt.Printf("Type:       daily\n")
+	fmt.Printf("Time:       %02d:%02d\n", hour, minute)
+	fmt.Printf("Context:   %s\n", context)
 	if alm.ExpiresAt != nil {
-		fmt.Printf("Expira:     %s\n", alm.ExpiresAt.Format("2006-01-02"))
+		fmt.Printf("Expires:     %s\n", alm.ExpiresAt.Format("2006-01-02"))
 	}
 
 	return nil
 }
 
 func addWeeklyAlarm(userID, scheduleStr, context, expiresStr string) error {
-	// Parsear "monday 14:30"
+	// Parse "monday 14:30"
 	parts := strings.Fields(scheduleStr)
 	if len(parts) != 2 {
-		return fmt.Errorf("formato inválido para --weekly (debe ser DAYNAME HH:MM)")
+		return fmt.Errorf("invalid format para --weekly (debe ser DAYNAME HH:MM)")
 	}
 
 	weekday, err := alarm.ParseWeekday(parts[0])
@@ -175,46 +178,46 @@ func addWeeklyAlarm(userID, scheduleStr, context, expiresStr string) error {
 
 	timeParts := strings.Split(parts[1], ":")
 	if len(timeParts) != 2 {
-		return fmt.Errorf("formato inválido para hora (debe ser HH:MM)")
+		return fmt.Errorf("invalid format para hora (debe ser HH:MM)")
 	}
 
 	hour, err := strconv.Atoi(timeParts[0])
 	if err != nil || hour < 0 || hour > 23 {
-		return fmt.Errorf("hora inválida: %s", timeParts[0])
+		return fmt.Errorf("invalid hour: %s", timeParts[0])
 	}
 
 	minute, err := strconv.Atoi(timeParts[1])
 	if err != nil || minute < 0 || minute > 59 {
-		return fmt.Errorf("minuto inválido: %s", timeParts[1])
+		return fmt.Errorf("invalid minute: %s", timeParts[1])
 	}
 
-	// Crear alarma
+	// Create alarm
 	alm := alarm.NewAlarm(context, alarm.RecurrenceWeekly)
 
-	// Agregar expiración si se especificó
+	// Add expiration if specified
 	if expiresStr != "" {
 		expiresAt, err := parseDateTime(expiresStr)
 		if err != nil {
-			return fmt.Errorf("error parseando --expires: %w", err)
+			return fmt.Errorf("error parsing --expires: %w", err)
 		}
 		alm.ExpiresAt = &expiresAt
 	}
 
-	// Guardar
+	// Save
 	schedule := alarm.WeeklySchedule{Weekday: weekday, Hour: hour, Minute: minute}
 	filename := schedule.Filename()
 	if err := store.SaveAlarm(userID, time.Now(), alarm.RecurrenceWeekly, filename, alm); err != nil {
-		return fmt.Errorf("error guardando alarma: %w", err)
+		return fmt.Errorf("error saving alarm: %w", err)
 	}
 
-	fmt.Printf("✓ Alarma creada exitosamente\n\n")
+	fmt.Printf("✓ Alarm created successfully\n\n")
 	fmt.Printf("ID:         %s\n", alm.ID)
-	fmt.Printf("Tipo:       weekly\n")
-	fmt.Printf("Día:        %s\n", weekday.String())
-	fmt.Printf("Hora:       %02d:%02d\n", hour, minute)
-	fmt.Printf("Contexto:   %s\n", context)
+	fmt.Printf("Type:       weekly\n")
+	fmt.Printf("Day:        %s\n", weekday.String())
+	fmt.Printf("Time:       %02d:%02d\n", hour, minute)
+	fmt.Printf("Context:   %s\n", context)
 	if alm.ExpiresAt != nil {
-		fmt.Printf("Expira:     %s\n", alm.ExpiresAt.Format("2006-01-02"))
+		fmt.Printf("Expires:     %s\n", alm.ExpiresAt.Format("2006-01-02"))
 	}
 
 	return nil
@@ -224,7 +227,7 @@ func addMonthlyAlarm(userID, scheduleStr, context, expiresStr string) error {
 	// Parsear "15 14:30"
 	parts := strings.Fields(scheduleStr)
 	if len(parts) != 2 {
-		return fmt.Errorf("formato inválido para --monthly (debe ser DAY HH:MM)")
+		return fmt.Errorf("invalid format para --monthly (debe ser DAY HH:MM)")
 	}
 
 	day, err := strconv.Atoi(parts[0])
@@ -234,46 +237,46 @@ func addMonthlyAlarm(userID, scheduleStr, context, expiresStr string) error {
 
 	timeParts := strings.Split(parts[1], ":")
 	if len(timeParts) != 2 {
-		return fmt.Errorf("formato inválido para hora (debe ser HH:MM)")
+		return fmt.Errorf("invalid format para hora (debe ser HH:MM)")
 	}
 
 	hour, err := strconv.Atoi(timeParts[0])
 	if err != nil || hour < 0 || hour > 23 {
-		return fmt.Errorf("hora inválida: %s", timeParts[0])
+		return fmt.Errorf("invalid hour: %s", timeParts[0])
 	}
 
 	minute, err := strconv.Atoi(timeParts[1])
 	if err != nil || minute < 0 || minute > 59 {
-		return fmt.Errorf("minuto inválido: %s", timeParts[1])
+		return fmt.Errorf("invalid minute: %s", timeParts[1])
 	}
 
-	// Crear alarma
+	// Create alarm
 	alm := alarm.NewAlarm(context, alarm.RecurrenceMonthly)
 
-	// Agregar expiración si se especificó
+	// Add expiration if specified
 	if expiresStr != "" {
 		expiresAt, err := parseDateTime(expiresStr)
 		if err != nil {
-			return fmt.Errorf("error parseando --expires: %w", err)
+			return fmt.Errorf("error parsing --expires: %w", err)
 		}
 		alm.ExpiresAt = &expiresAt
 	}
 
-	// Guardar
+	// Save
 	schedule := alarm.MonthlySchedule{Day: day, Hour: hour, Minute: minute}
 	filename := schedule.Filename()
 	if err := store.SaveAlarm(userID, time.Now(), alarm.RecurrenceMonthly, filename, alm); err != nil {
-		return fmt.Errorf("error guardando alarma: %w", err)
+		return fmt.Errorf("error saving alarm: %w", err)
 	}
 
-	fmt.Printf("✓ Alarma creada exitosamente\n\n")
+	fmt.Printf("✓ Alarm created successfully\n\n")
 	fmt.Printf("ID:         %s\n", alm.ID)
-	fmt.Printf("Tipo:       monthly\n")
-	fmt.Printf("Día:        %d\n", day)
-	fmt.Printf("Hora:       %02d:%02d\n", hour, minute)
-	fmt.Printf("Contexto:   %s\n", context)
+	fmt.Printf("Type:       monthly\n")
+	fmt.Printf("Day:        %d\n", day)
+	fmt.Printf("Time:       %02d:%02d\n", hour, minute)
+	fmt.Printf("Context:   %s\n", context)
 	if alm.ExpiresAt != nil {
-		fmt.Printf("Expira:     %s\n", alm.ExpiresAt.Format("2006-01-02"))
+		fmt.Printf("Expires:     %s\n", alm.ExpiresAt.Format("2006-01-02"))
 	}
 
 	return nil
@@ -283,12 +286,12 @@ func addYearlyAlarm(userID, scheduleStr, context, expiresStr string) error {
 	// Parsear "11-21 14:30"
 	parts := strings.Fields(scheduleStr)
 	if len(parts) != 2 {
-		return fmt.Errorf("formato inválido para --yearly (debe ser MM-DD HH:MM)")
+		return fmt.Errorf("invalid format para --yearly (debe ser MM-DD HH:MM)")
 	}
 
 	dateParts := strings.Split(parts[0], "-")
 	if len(dateParts) != 2 {
-		return fmt.Errorf("formato inválido para fecha (debe ser MM-DD)")
+		return fmt.Errorf("invalid format para fecha (debe ser MM-DD)")
 	}
 
 	month, err := strconv.Atoi(dateParts[0])
@@ -303,46 +306,46 @@ func addYearlyAlarm(userID, scheduleStr, context, expiresStr string) error {
 
 	timeParts := strings.Split(parts[1], ":")
 	if len(timeParts) != 2 {
-		return fmt.Errorf("formato inválido para hora (debe ser HH:MM)")
+		return fmt.Errorf("invalid format para hora (debe ser HH:MM)")
 	}
 
 	hour, err := strconv.Atoi(timeParts[0])
 	if err != nil || hour < 0 || hour > 23 {
-		return fmt.Errorf("hora inválida: %s", timeParts[0])
+		return fmt.Errorf("invalid hour: %s", timeParts[0])
 	}
 
 	minute, err := strconv.Atoi(timeParts[1])
 	if err != nil || minute < 0 || minute > 59 {
-		return fmt.Errorf("minuto inválido: %s", timeParts[1])
+		return fmt.Errorf("invalid minute: %s", timeParts[1])
 	}
 
-	// Crear alarma
+	// Create alarm
 	alm := alarm.NewAlarm(context, alarm.RecurrenceYearly)
 
-	// Agregar expiración si se especificó
+	// Add expiration if specified
 	if expiresStr != "" {
 		expiresAt, err := parseDateTime(expiresStr)
 		if err != nil {
-			return fmt.Errorf("error parseando --expires: %w", err)
+			return fmt.Errorf("error parsing --expires: %w", err)
 		}
 		alm.ExpiresAt = &expiresAt
 	}
 
-	// Guardar
+	// Save
 	schedule := alarm.YearlySchedule{Month: time.Month(month), Day: day, Hour: hour, Minute: minute}
 	filename := schedule.Filename()
 	if err := store.SaveAlarm(userID, time.Now(), alarm.RecurrenceYearly, filename, alm); err != nil {
-		return fmt.Errorf("error guardando alarma: %w", err)
+		return fmt.Errorf("error saving alarm: %w", err)
 	}
 
-	fmt.Printf("✓ Alarma creada exitosamente\n\n")
+	fmt.Printf("✓ Alarm created successfully\n\n")
 	fmt.Printf("ID:         %s\n", alm.ID)
-	fmt.Printf("Tipo:       yearly\n")
-	fmt.Printf("Fecha:      %02d-%02d\n", month, day)
-	fmt.Printf("Hora:       %02d:%02d\n", hour, minute)
-	fmt.Printf("Contexto:   %s\n", context)
+	fmt.Printf("Type:       yearly\n")
+	fmt.Printf("Date:      %02d-%02d\n", month, day)
+	fmt.Printf("Time:       %02d:%02d\n", hour, minute)
+	fmt.Printf("Context:   %s\n", context)
 	if alm.ExpiresAt != nil {
-		fmt.Printf("Expira:     %s\n", alm.ExpiresAt.Format("2006-01-02"))
+		fmt.Printf("Expires:     %s\n", alm.ExpiresAt.Format("2006-01-02"))
 	}
 
 	return nil
@@ -355,32 +358,32 @@ var (
 
 var alarmCheckCmd = &cobra.Command{
 	Use:   "check",
-	Short: "Verificar alarmas pendientes",
-	Long: `Verifica y ejecuta alarmas que corresponden al momento actual.
-Incluye recovery automático de alarmas perdidas (últimos 60 minutos).
+	Short: "Check pending alarms",
+	Long: `Check and execute alarms for current time.
+Includes automatic recovery of missed alarms (últimos 60 minutos).
 
-Este comando está diseñado para ejecutarse desde cron cada minuto.
-Si no hay alarmas, no produce output (silencio).
+This command is designed to run from cron every minute.
+If no alarms, produces no output (silent).
 
-Ejemplos:
+Examples:
   clical alarm check --user alice
   clical alarm check --user alice --verbose`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if userID == "" {
-			return fmt.Errorf("se requiere --user")
+			return fmt.Errorf("--user is required")
 		}
 
 		// Verificar alarmas en el momento actual
 		now := time.Now()
 		alarms, err := store.CheckAlarms(userID, now)
 		if err != nil {
-			return fmt.Errorf("error verificando alarmas: %w", err)
+			return fmt.Errorf("error verifying alarmas: %w", err)
 		}
 
 		// Si no hay alarmas, salir silenciosamente
 		if len(alarms) == 0 {
 			if alarmCheckVerbose {
-				fmt.Fprintf(cmd.ErrOrStderr(), "No hay alarmas para ejecutar en este momento\n")
+				fmt.Fprintf(cmd.ErrOrStderr(), "No alarms to execute at this time\n")
 			}
 			return nil
 		}
@@ -388,7 +391,7 @@ Ejemplos:
 		// Emitir JSON a stdout
 		jsonData, err := json.MarshalIndent(alarms, "", "  ")
 		if err != nil {
-			return fmt.Errorf("error serializando alarmas: %w", err)
+			return fmt.Errorf("error serializing alarmas: %w", err)
 		}
 
 		fmt.Println(string(jsonData))
@@ -405,29 +408,29 @@ var (
 
 var alarmListCmd = &cobra.Command{
 	Use:   "list",
-	Short: "Listar alarmas",
-	Long: `Lista todas las alarmas activas del usuario.
+	Short: "List alarms",
+	Long: `List all active alarms for user.
 
-Ejemplos:
+Examples:
   clical alarm list --user alice
   clical alarm list --user alice --past
   clical alarm list --user alice --json`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if userID == "" {
-			return fmt.Errorf("se requiere --user")
+			return fmt.Errorf("--user is required")
 		}
 
-		// Listar alarmas activas
+		// List active alarms
 		activeAlarms, err := store.ListActiveAlarms(userID)
 		if err != nil {
-			return fmt.Errorf("error listando alarmas activas: %w", err)
+			return fmt.Errorf("error listing alarmas activas: %w", err)
 		}
 
 		var pastAlarms []*alarm.Alarm
 		if alarmListPast {
 			pastAlarms, err = store.ListPastAlarms(userID)
 			if err != nil {
-				return fmt.Errorf("error listando alarmas pasadas: %w", err)
+				return fmt.Errorf("error listing alarmas pasadas: %w", err)
 			}
 		}
 
@@ -442,7 +445,7 @@ Ejemplos:
 
 			jsonData, err := json.MarshalIndent(output, "", "  ")
 			if err != nil {
-				return fmt.Errorf("error serializando alarmas: %w", err)
+				return fmt.Errorf("error serializing alarmas: %w", err)
 			}
 
 			fmt.Println(string(jsonData))
@@ -451,12 +454,12 @@ Ejemplos:
 
 		// Output tabla
 		if len(activeAlarms) == 0 && len(pastAlarms) == 0 {
-			fmt.Println("No hay alarmas")
+			fmt.Println("No alarms")
 			return nil
 		}
 
 		if len(activeAlarms) > 0 {
-			fmt.Println("ALARMAS ACTIVAS:")
+			fmt.Println("ACTIVE ALARMS:")
 			fmt.Println()
 			fmt.Printf("%-25s %-10s %-20s %s\n", "ID", "TIPO", "PROGRAMADA", "CONTEXTO")
 			fmt.Println(strings.Repeat("-", 100))
@@ -473,9 +476,9 @@ Ejemplos:
 		}
 
 		if alarmListPast && len(pastAlarms) > 0 {
-			fmt.Println("ALARMAS PASADAS:")
+			fmt.Println("PAST ALARMS:")
 			fmt.Println()
-			fmt.Printf("%-25s %-10s %-20s %s\n", "ID", "TIPO", "EJECUTADA", "CONTEXTO")
+			fmt.Printf("%-25s %-10s %-20s %s\n", "ID", "TIPO", "EXECUTED", "CONTEXTO")
 			fmt.Println(strings.Repeat("-", 100))
 
 			for _, alm := range pastAlarms {
@@ -520,25 +523,25 @@ func formatSchedule(alm *alarm.Alarm) string {
 // alarm-cancel
 var alarmCancelCmd = &cobra.Command{
 	Use:   "cancel ALARM_ID",
-	Short: "Cancelar una alarma",
-	Long: `Cancela (elimina) una alarma activa por su ID.
+	Short: "Cancel an alarm",
+	Long: `Cancel (delete) an active alarm by its ID.
 
-Ejemplos:
+Examples:
   clical alarm cancel --user alice alarm_once_1234567890_abcd1234
   clical alarm cancel --user alice alarm_weekly_1234567890_abcd1234`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if userID == "" {
-			return fmt.Errorf("se requiere --user")
+			return fmt.Errorf("--user is required")
 		}
 
 		alarmID := args[0]
 
 		if err := store.CancelAlarm(userID, alarmID); err != nil {
-			return fmt.Errorf("error cancelando alarma: %w", err)
+			return fmt.Errorf("error canceling alarma: %w", err)
 		}
 
-		fmt.Printf("✓ Alarma cancelada exitosamente: %s\n", alarmID)
+		fmt.Printf("✓ Alarm canceled successfully: %s\n", alarmID)
 
 		return nil
 	},
@@ -546,22 +549,22 @@ Ejemplos:
 
 func init() {
 	// alarm add
-	alarmAddCmd.Flags().StringVar(&alarmContext, "context", "", "Contexto de la alarma (requerido)")
-	alarmAddCmd.Flags().StringVar(&alarmAt, "at", "", "Fecha/hora para alarma one-time (ej: '2025-11-23 14:30', 'tomorrow 10:00', '+30m')")
-	alarmAddCmd.Flags().StringVar(&alarmDaily, "daily", "", "Hora para alarma diaria (ej: '14:30')")
-	alarmAddCmd.Flags().StringVar(&alarmWeekly, "weekly", "", "Día y hora para alarma semanal (ej: 'monday 14:30')")
-	alarmAddCmd.Flags().StringVar(&alarmMonthly, "monthly", "", "Día del mes y hora (ej: '15 14:30')")
-	alarmAddCmd.Flags().StringVar(&alarmYearly, "yearly", "", "Fecha y hora anual (ej: '11-21 14:30')")
-	alarmAddCmd.Flags().StringVar(&alarmExpires, "expires", "", "Fecha de expiración para recurrentes (ej: '2025-12-31')")
+	alarmAddCmd.Flags().StringVar(&alarmContext, "context", "", "Alarm context (required)")
+	alarmAddCmd.Flags().StringVar(&alarmAt, "at", "", "Date/time for one-time alarm (eg: '2025-11-23 14:30', 'tomorrow 10:00', '+30m')")
+	alarmAddCmd.Flags().StringVar(&alarmDaily, "daily", "", "Time for daily alarm (eg: '14:30')")
+	alarmAddCmd.Flags().StringVar(&alarmWeekly, "weekly", "", "Day and time for weekly alarm (eg: 'monday 14:30')")
+	alarmAddCmd.Flags().StringVar(&alarmMonthly, "monthly", "", "Day of month and time (eg: '15 14:30')")
+	alarmAddCmd.Flags().StringVar(&alarmYearly, "yearly", "", "Yearly date and time (eg: '11-21 14:30')")
+	alarmAddCmd.Flags().StringVar(&alarmExpires, "expires", "", "Expiration date for recurring alarms (eg: '2025-12-31')")
 
 	// alarm check
-	alarmCheckCmd.Flags().BoolVarP(&alarmCheckVerbose, "verbose", "v", false, "Mostrar logs de debugging")
+	alarmCheckCmd.Flags().BoolVarP(&alarmCheckVerbose, "verbose", "v", false, "Show debugging logs")
 
 	// alarm list
-	alarmListCmd.Flags().BoolVar(&alarmListPast, "past", false, "Incluir alarmas pasadas")
+	alarmListCmd.Flags().BoolVar(&alarmListPast, "past", false, "Include past alarms")
 	alarmListCmd.Flags().BoolVar(&alarmListJSON, "json", false, "Output en formato JSON")
 
-	// Agregar subcomandos
+	// Add subcommands
 	alarmCmd.AddCommand(alarmAddCmd)
 	alarmCmd.AddCommand(alarmCheckCmd)
 	alarmCmd.AddCommand(alarmListCmd)

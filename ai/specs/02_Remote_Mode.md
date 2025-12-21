@@ -8,125 +8,144 @@
 
 El "modo remoto" es un workflow de desarrollo que permite a Claude Code recibir instrucciones vía Telegram mientras el chat de consola está abierto. Esto permite al usuario dar instrucciones desde cualquier lugar sin necesidad de estar frente a la computadora.
 
+Los mensajes de Telegram son **inyectados directamente** al chat local de Claude Code, por lo que Claude los procesa como si el usuario estuviera escribiendo en la consola.
+
 ## Funcionamiento
 
 ### Script de Comunicación
 
-El sistema utiliza un script llamado `s` (ubicado en el directorio del proyecto) que proporciona dos comandos principales:
+El sistema utiliza un script llamado `s` (ubicado en el directorio del proyecto) que proporciona los siguientes comandos:
 
-1. **`s wait-for-telegram-response`**
-   - Espera bloqueantemente un mensaje de Telegram
-   - Cuando llega un mensaje, lo imprime en stdout y termina
-   - Claude Code procesa ese mensaje como si viniera del chat de consola
+#### Envío de Mensajes
 
-2. **`s gobot-send-message <mensaje>`**
-   - Envía un mensaje desde Claude Code hacia Telegram
-   - Permite notificar al usuario sobre el progreso
+**`s gobot-send-message <mensaje>`**
+- Envía un mensaje de texto desde Claude Code hacia Telegram
+- Permite notificar al usuario sobre el progreso y estado de las tareas
+
+#### Envío de Archivos
+
+**`s gobot-send-file <path-to-file>`**
+- Envía un archivo cualquiera al usuario vía Telegram
+- Útil para compartir logs, archivos de configuración, binarios, etc.
+- El archivo se envía como documento
+
+**`s gobot-send-image <path-to-image>`**
+- Envía una imagen al usuario vía Telegram
+- Formatos compatibles: JPG, PNG, GIF, WebP
+- La imagen se muestra directamente en el chat (no como documento)
+- Útil para compartir gráficos, diagramas, capturas de pantalla
+
+**`s gobot-send-video <path-to-video>`**
+- Envía un video al usuario vía Telegram
+- Formatos compatibles: MP4, AVI, MOV, etc.
+- El video se puede reproducir directamente en Telegram
+- Útil para compartir demos, grabaciones de pantalla
+
+**`s gobot-send-voice <path-to-audio>`**
+- Envía un archivo de audio como mensaje de voz en Telegram
+- Se muestra como mensaje de audio con forma de onda (diferente a un archivo adjunto)
+- Formatos compatibles: MP3, OGG, WAV, etc.
+- Útil para compartir grabaciones de audio, mensajes de voz generados
 
 ### Flujo de Trabajo
 
 ```
 ┌─────────────┐
-│ Claude Code │
+│ Claude Code │ 1. Claude Code trabajando en una tarea
 └──────┬──────┘
        │
-       │ 1. Ejecuta: s wait-for-telegram-response (BLOQUEANTE)
+       │ 2. Ejecuta tareas solicitadas
        │
        ▼
-┌─────────────────┐
-│ Script espera   │◄────── 2. Usuario envía mensaje desde Telegram
-│ mensaje Telegram│
-└──────┬──────────┘
+┌─────────────────────┐
+│ s gobot-send-message│─────► 3. Notifica progreso al usuario vía Telegram
+└─────────────────────┘
+
+
+┌──────────────────────┐
+│ Usuario envía mensaje│◄────── 4. Usuario responde desde Telegram
+│ desde Telegram       │
+└──────┬───────────────┘
        │
-       │ 3. Script imprime mensaje y termina
+       │ 5. Mensaje inyectado directamente al chat local
        │
        ▼
 ┌─────────────┐
-│ Claude Code │◄────── 4. Procesa mensaje como si viniera del chat
+│ Claude Code │◄────── 6. Procesa mensaje como si viniera de la consola
 └──────┬──────┘
-       │
-       │ 5. Ejecuta tareas solicitadas
-       │
-       ▼
-┌─────────────┐
-│ s send-to-  │────── 6. Notifica progreso al usuario vía Telegram
-│ telegram    │
-└─────────────┘
-       │
-       │ 7. Vuelve a ejecutar: s wait-for-telegram-response
        │
        └──────► (repite el ciclo)
 ```
 
 ## Reglas Importantes
 
-### 1. Ejecutar con Timeout para Bloqueo Correcto
+### 1. Reportar Progreso Proactivamente
 
-**❌ INCORRECTO:**
+**Regla:** Cuando trabajas en tareas complejas o largas, reporta progreso regularmente vía `s gobot-send-message`.
+
+**Razón:** El usuario puede no estar frente a la consola. Enviar actualizaciones vía Telegram le permite monitorear el progreso desde cualquier lugar.
+
+**Formato de Reportes:**
+
+Los reportes deben indicar claramente si el agente continuará trabajando o si ha terminado:
+
+**Reportes Intermedios** (agente continúa trabajando):
 ```bash
-# Sin timeout (se ejecuta en background automáticamente)
-s wait-for-telegram-response
-
-# O ejecutando manualmente en background
-s wait-for-telegram-response &
-# o usando run_in_background: true
+s gobot-send-message "Tests creados. 15 tests, todos pasan. Continúo trabajando."
+s gobot-send-message "Compilación exitosa. Binary: 2.0MB. Continúo trabajando."
+s gobot-send-message "Módulo de autenticación implementado. Continúo trabajando."
 ```
 
-**✅ CORRECTO:**
+**Reportes Finales** (agente ha terminado y espera instrucciones):
 ```bash
-# Con timeout de 10 minutos (600000 ms)
-s wait-for-telegram-response
-# Usando parámetro timeout: 600000
+s gobot-send-message "Implementación completada. Tests pasando. Tarea terminada, esperando instrucciones."
+s gobot-send-message "Refactorización finalizada. Código optimizado. Tarea terminada, esperando instrucciones."
+s gobot-send-message "Error encontrado: [descripción]. Tarea terminada, esperando instrucciones."
 ```
 
-**Implementación en Claude Code:**
-```xml
-<invoke name="Bash">
-<parameter name="command">s wait-for-telegram-response</parameter>
-<parameter name="timeout">600000</parameter>
-</invoke>
-```
+**Regla de terminación:**
+- Si vas a continuar con más subtareas → termina con "Continúo trabajando"
+- Si has completado TODO y no ejecutarás más tareas → termina con "Tarea terminada, esperando instrucciones"
 
-**Razón:** Sin el parámetro `timeout`, Claude Code ejecuta automáticamente el comando en background. Cuando un comando corre en background, Claude Code no espera su resultado antes de continuar, por lo que **nunca recibirá la respuesta de Telegram** y el modo remoto no funcionará. El timeout de 600000ms (10 minutos) hace que el comando sea bloqueante, forzando a Claude Code a esperar la respuesta antes de poder hacer cualquier otra cosa.
+### 2. Usar Telegram para Comunicación Asíncrona
 
-### 2. Siempre Notificar Antes de Escuchar
+**Regla:** Cuando necesites información del usuario y no haya respuesta inmediata en consola, envía la pregunta vía Telegram.
 
-**Regla:** Cuando estás en modo remoto, **SIEMPRE** debes enviar un mensaje a Telegram ANTES de volver a ejecutar `wait-for-telegram-response`.
-
-**Razón:** El usuario necesita saber que completaste una tarea o que estás listo para la siguiente instrucción. Si simplemente vuelves a escuchar sin notificar, el usuario no sabrá que estás esperando.
-
-**Ejemplo correcto:**
-
-```bash
-# Claude Code termina una tarea
-# 1. PRIMERO notifica
-s gobot-send-message "Tests de storage completados. 95% cobertura. Todos pasan."
-
-# 2. LUEGO vuelve a escuchar
-s wait-for-telegram-response  # Con timeout: 600000
-```
-
-**Ejemplos de mensajes apropiados:**
-- "Tarea completada. Listo para la siguiente instrucción."
-- "Compilación exitosa. ¿Qué sigue?"
-- "Tests creados. 15 tests, todos pasan. Esperando instrucciones."
-- "Error encontrado: [descripción]. ¿Cómo procedo?"
-
-### 3. Mantener Modo Remoto Cuando Hay Dudas
-
-**Regla:** Si Claude Code tiene dudas sobre qué hacer o necesita instrucciones adicionales del usuario, **DEBE mantener el modo remoto activo**.
-
-**Razón:** Si el usuario no está presente en la consola, no podrá responder preguntas. Al mantener modo remoto activo, el usuario puede responder vía Telegram cuando esté disponible.
+**Razón:** El usuario puede estar ocupado o lejos de la consola. Telegram permite comunicación asíncrona - el usuario responderá cuando esté disponible, y su respuesta será inyectada automáticamente al chat local.
 
 **Ejemplo:**
 
 ```bash
-# Claude Code termina una tarea pero no está seguro del siguiente paso
-# ❌ INCORRECTO: Preguntar en el chat y esperar
-# ✅ CORRECTO: Enviar pregunta por Telegram y volver a modo remoto
+# Claude Code necesita clarificación
+s gobot-send-message "Implementación completada. ¿Qué características debo agregar ahora?"
+# Usuario responderá vía Telegram cuando esté disponible
+# Respuesta será inyectada automáticamente al chat local
+```
 
-s gobot-send-message "Tarea completada. ¿Qué debo hacer ahora?"
-s wait-for-telegram-response  # Con timeout: 600000
+### 3. Compartir Archivos Cuando Sea Solicitado
+
+**Regla:** Si el usuario solicita un archivo específico, enviarlo usando el comando apropiado según el tipo de archivo.
+
+**Razón:** El usuario puede necesitar revisar logs, binarios, gráficos o cualquier archivo generado sin tener acceso directo a la máquina.
+
+**Ejemplos:**
+
+```bash
+# Usuario pide: "Envíame el log de la compilación"
+s gobot-send-file "/var/log/myapp.log"
+s gobot-send-message "Log enviado. Tarea terminada, esperando instrucciones."
+
+# Usuario pide: "Muéstrame un diagrama de la arquitectura"
+s gobot-send-image "/tmp/architecture-diagram.png"
+s gobot-send-message "Diagrama enviado. Tarea terminada, esperando instrucciones."
+
+# Usuario pide: "Envíame el binario compilado"
+s gobot-send-file "bin/myapp"
+s gobot-send-message "Binary enviado (2.0MB). Tarea terminada, esperando instrucciones."
+
+# Usuario pide: "Mándame ese video de la demo"
+s gobot-send-video "/tmp/demo-recording.mp4"
+s gobot-send-message "Video enviado. Tarea terminada, esperando instrucciones."
 ```
 
 ## Casos de Uso
@@ -135,100 +154,157 @@ s wait-for-telegram-response  # Con timeout: 600000
 
 Usuario está lejos de la computadora y quiere que Claude Code trabaje:
 
-1. Usuario: Inicia sesión y pone a Claude Code en modo remoto
-2. Claude Code: Ejecuta `s wait-for-telegram-response`
-3. Usuario: Envía instrucciones vía Telegram (ej: "implementa autenticación")
-4. Claude Code: Recibe mensaje, implementa, reporta progreso vía `s gobot-send-message`
-5. Claude Code: Vuelve a ejecutar `s wait-for-telegram-response`
-6. Usuario: Continúa enviando instrucciones según necesite
+1. Usuario: Deja la consola abierta con Claude Code activo
+2. Usuario: Envía instrucción vía Telegram (ej: "implementa autenticación")
+3. Sistema: Inyecta mensaje al chat local automáticamente
+4. Claude Code: Recibe mensaje en consola, implementa la tarea
+5. Claude Code: Reporta progreso vía `s gobot-send-message "Autenticación implementada. Tests pasan."`
+6. Usuario: Continúa enviando instrucciones vía Telegram según necesite
 
 ### Caso 2: Desarrollo Híbrido
 
 Usuario alterna entre estar presente y ausente:
 
 - Cuando está presente: Usa el chat de consola normalmente
-- Cuando se va: Le dice a Claude Code "entra en modo remoto"
-- Claude Code: Ejecuta `s wait-for-telegram-response` y queda esperando
-- Usuario: Puede enviar instrucciones desde donde esté
+- Cuando se va: Envía instrucciones desde Telegram
+- Claude Code: Procesa ambas fuentes de la misma manera (todo llega al chat local)
+- Claude Code: Reporta progreso vía Telegram para mantener al usuario informado
 
 ### Caso 3: Tareas Largas con Supervisión Remota
 
-Claude Code está ejecutando una tarea larga:
+Claude Code está ejecutando una tarea larga con múltiples subtareas:
 
-1. Claude Code: Reporta inicio de tarea vía `s gobot-send-message "Iniciando compilación..."`
-2. Claude Code: Ejecuta tarea
-3. Claude Code: Reporta completitud vía `s gobot-send-message "Compilación exitosa"`
-4. Claude Code: Vuelve a modo remoto con `s wait-for-telegram-response`
+1. Claude Code: Reporta inicio vía `s gobot-send-message "Iniciando refactorización del módulo storage. Continúo trabajando."`
+2. Claude Code: Ejecuta primera subtarea (refactorizar filesystem.go)
+3. Claude Code: Reporta vía `s gobot-send-message "filesystem.go refactorizado. Continúo trabajando."`
+4. Claude Code: Ejecuta segunda subtarea (actualizar tests)
+5. Claude Code: Reporta vía `s gobot-send-message "Tests actualizados. Continúo trabajando."`
+6. Claude Code: Ejecuta tercera subtarea (ejecutar test suite completo)
+7. Claude Code: Reporta completitud final vía `s gobot-send-message "Refactorización completa. 25 tests, todos pasan. Tarea terminada, esperando instrucciones."`
+8. Usuario: Puede responder con siguiente instrucción cuando esté disponible
+
+### Caso 4: Compartir Archivos Generados
+
+Usuario solicita archivos específicos vía Telegram:
+
+1. Usuario: Envía vía Telegram "Compila el proyecto y envíame el binario"
+2. Sistema: Inyecta mensaje al chat local
+3. Claude Code: Compila el proyecto
+4. Claude Code: Reporta vía `s gobot-send-message "Compilación exitosa. Binary: 2.0MB. Continúo trabajando."`
+5. Claude Code: Envía binario vía `s gobot-send-file "bin/myapp"`
+6. Claude Code: Reporta vía `s gobot-send-message "Binary enviado. Tarea terminada, esperando instrucciones."`
+7. Usuario: Recibe el archivo en Telegram y puede descargarlo
 
 ## Ejemplo Práctico
 
 ### Sesión Completa en Modo Remoto
 
 ```bash
-# Usuario dice: "Entra en modo remoto"
-$ s wait-for-telegram-response
+# Usuario está lejos de la computadora
+# Envía por Telegram: "Crea tests para el módulo de storage y luego optimiza el código"
 
-# [Bloqueado esperando Telegram...]
-# Usuario envía por Telegram: "Crea tests para el módulo de storage"
+# [Sistema inyecta mensaje al chat local de Claude Code]
 
-# Script imprime y termina:
-"Crea tests para el módulo de storage"
+# Claude Code ve en consola:
+User: Crea tests para el módulo de storage y luego optimiza el código
 
-# Claude Code procesa el mensaje:
+# Claude Code empieza a trabajar:
 # - Lee pkg/storage/filesystem.go
 # - Crea pkg/storage/filesystem_test.go
+
+# Claude Code reporta progreso intermedio:
+$ s gobot-send-message "Tests de storage creados. 15 tests. Continúo trabajando."
+
+# Claude Code continúa:
 # - Ejecuta: go test ./pkg/storage
+# - Analiza resultados
 
-# Claude Code reporta:
-$ s gobot-send-message "Tests de storage creados. 15 tests, 95% cobertura. Todos pasan."
+$ s gobot-send-message "Tests ejecutados. 95% cobertura, todos pasan. Continúo trabajando."
 
-# Claude Code vuelve a modo remoto:
-$ s wait-for-telegram-response
+# Claude Code continúa con optimización:
+# - Analiza filesystem.go
+# - Aplica optimizaciones
+# - Ejecuta tests nuevamente
 
-# [Bloqueado esperando siguiente instrucción...]
+$ s gobot-send-message "Código optimizado. Tests siguen pasando. Tarea terminada, esperando instrucciones."
+
+# Usuario recibe notificación en Telegram
+# Sabe que puede enviar siguiente instrucción
 ```
 
 ## Limitaciones
 
-1. **No Bidireccional Simultáneo:** No se puede estar en chat de consola Y Telegram al mismo tiempo
-2. **Espera Bloqueante:** Mientras espera Telegram, el chat de consola no responde
-3. **Requiere Script:** Necesita que el script `s` esté funcionando correctamente
+1. **Requiere Script:** Necesita que el script `s` esté funcionando correctamente para enviar mensajes
+2. **Requiere Consola Abierta:** La consola de Claude Code debe permanecer abierta para recibir mensajes inyectados
+3. **Sin Confirmación de Recepción:** Claude Code no sabe si el mensaje vía Telegram fue entregado exitosamente
 
 ## Beneficios
 
 1. **Desarrollo Asíncrono:** Usuario puede dar instrucciones desde cualquier lugar
-2. **Continuidad:** Claude Code puede trabajar en tareas largas sin supervisión presencial
+2. **Continuidad:** Claude Code trabaja continuamente sin necesidad de supervisión presencial
 3. **Notificaciones:** Usuario recibe actualizaciones de progreso vía Telegram
-4. **Flexibilidad:** Usuario puede alternar entre consola y Telegram según necesidad
+4. **Flexibilidad:** Usuario puede enviar instrucciones vía Telegram sin interrumpir el flujo de trabajo
+5. **Simplicidad:** Inyección directa de mensajes simplifica el workflow (sin comandos de espera)
 
 ## Mejores Prácticas
 
 ### Para Claude Code
 
-1. **Siempre ejecutar bloqueantemente:** Usar timeout 600000 para `wait-for-telegram-response`
-2. **Reportar progreso:** Usar `s gobot-send-message` para mantener informado al usuario
-3. **Ante dudas, modo remoto:** Si no sabes qué hacer, quédate esperando instrucciones
-4. **Mensajes claros:** Al reportar vía Telegram, ser conciso y claro
+1. **Reportar progreso periódicamente:** Usar `s gobot-send-message` durante tareas largas para mantener al usuario informado
+2. **Indicar estado claramente:**
+   - Si continúas trabajando → terminar con "Continúo trabajando"
+   - Si terminaste TODO → terminar con "Tarea terminada, esperando instrucciones"
+3. **Mensajes claros y concisos:** Ser específico sobre qué se hizo y qué sigue
+4. **Reportar errores inmediatamente:** Si algo falla, notificar vía Telegram con descripción del problema y terminar con "Tarea terminada, esperando instrucciones"
+5. **Reportar al terminar:** SIEMPRE enviar reporte final cuando completes todas las tareas solicitadas
+6. **Compartir archivos cuando se solicite:** Si el usuario pide un archivo, usar el comando apropiado:
+   - `s gobot-send-file` para archivos generales (logs, binarios, configs)
+   - `s gobot-send-image` para imágenes y gráficos
+   - `s gobot-send-video` para videos y demos
+   - `s gobot-send-voice` para archivos de audio
 
 ### Para Usuario
 
 1. **Instrucciones claras:** Ser específico en lo que se pide vía Telegram
-2. **Confirmar recepción:** Si Claude Code reporta algo importante, responder
-3. **Salir de modo remoto:** Avisar explícitamente cuando quieras usar la consola
+2. **Confirmar recepción:** Si Claude Code reporta algo importante, responder para dar siguiente instrucción
+3. **Mantener consola abierta:** La consola debe permanecer activa para recibir mensajes inyectados
 
 ## Resumen de Comandos
 
-```bash
-# Entrar en modo remoto (espera bloqueante con timeout)
-s wait-for-telegram-response
-# IMPORTANTE: Usar con timeout: 600000
+### Comandos Disponibles
 
-# Enviar mensaje a Telegram
+```bash
+# Enviar mensaje de texto
 s gobot-send-message "mensaje aquí"
+
+# Enviar archivo genérico (documento)
+s gobot-send-file "/path/to/file"
+
+# Enviar imagen (se muestra directamente en el chat)
+s gobot-send-image "/path/to/image.png"
+
+# Enviar video (reproducible en Telegram)
+s gobot-send-video "/path/to/video.mp4"
+
+# Enviar audio como mensaje de voz
+s gobot-send-voice "/path/to/audio.mp3"
 ```
+
+### Recepción de Mensajes
+
+Los mensajes del usuario vía Telegram son inyectados automáticamente al chat local de Claude Code. No se requiere ningún comando especial para recibirlos.
+
+## Cómo Funciona Internamente
+
+1. **Usuario escribe en Telegram:** El mensaje se envía al bot de Telegram
+2. **Sistema de inyección:** Un proceso detecta el mensaje y lo inyecta directamente al stdin de Claude Code
+3. **Claude Code recibe:** El mensaje aparece en la consola como si el usuario lo hubiera escrito localmente
+4. **Claude Code procesa:** Responde y ejecuta tareas normalmente
+5. **Claude Code reporta:** Usa `s gobot-send-message` para enviar actualizaciones al usuario
 
 ---
 
 **Documentado:** 2025-11-21
-**Uso:** Activo en desarrollo de clical
+**Actualizado:** 2025-12-10
+**Uso:** Activo en desarrollo actual
 **Estado:** Operativo

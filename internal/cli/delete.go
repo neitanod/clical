@@ -16,28 +16,28 @@ var (
 
 var deleteCmd = &cobra.Command{
 	Use:   "delete",
-	Short: "Eliminar un evento",
-	Long: `Elimina un evento del calendario.
+	Short: "Delete an event",
+	Long: `Delete a calendar event.
 
-Ejemplos:
+Examples:
   clical delete --user=12345 --id=abc123def456
   clical delete --user=12345 --id=abc123def456 --force`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// Validar argumentos
+		// Validate arguments
 		if userID == "" {
-			return fmt.Errorf("se requiere --user")
+			return fmt.Errorf("--user is required")
 		}
 		if deleteID == "" {
-			return fmt.Errorf("se requiere --id")
+			return fmt.Errorf("--id is required")
 		}
 
-		// Obtener evento primero para mostrar qué se va a eliminar
+		// Get event first to show what will be deleted
 		entry, err := store.GetEntry(userID, deleteID)
 		if err != nil {
-			return fmt.Errorf("error obteniendo evento: %w", err)
+			return fmt.Errorf("error getting event: %w", err)
 		}
 
-		// Mostrar evento
+		// Show event
 		fmt.Printf("Evento a eliminar:\n")
 		fmt.Printf("  %s - %s (%d min)\n",
 			entry.DateTime.Format("2006-01-02 15:04"),
@@ -51,7 +51,7 @@ Ejemplos:
 			reader := bufio.NewReader(os.Stdin)
 			response, err := reader.ReadString('\n')
 			if err != nil {
-				return fmt.Errorf("error leyendo respuesta: %w", err)
+				return fmt.Errorf("error reading respuesta: %w", err)
 			}
 
 			response = strings.ToLower(strings.TrimSpace(response))
@@ -61,12 +61,12 @@ Ejemplos:
 			}
 		}
 
-		// Eliminar
+		// Delete
 		if err := store.DeleteEntry(userID, deleteID); err != nil {
-			return fmt.Errorf("error eliminando evento: %w", err)
+			return fmt.Errorf("error deleting evento: %w", err)
 		}
 
-		fmt.Println("✓ Evento eliminado exitosamente")
+		fmt.Println("✓ Event deleted successfully")
 
 		return nil
 	},

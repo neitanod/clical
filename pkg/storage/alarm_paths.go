@@ -28,7 +28,7 @@ func (ap *AlarmPaths) UserAlarmsDir() string {
 	return filepath.Join(ap.baseDir, "users", ap.userID, "alarms")
 }
 
-// PendingDir retorna el directorio de alarmas pendientes (one-time)
+// PendingDir returns the directory for pending alarms (one-time)
 func (ap *AlarmPaths) PendingDir() string {
 	return filepath.Join(ap.UserAlarmsDir(), "pending")
 }

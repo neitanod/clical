@@ -9,8 +9,8 @@ import (
 
 var userCmd = &cobra.Command{
 	Use:   "user",
-	Short: "Gestión de usuarios",
-	Long:  "Comandos para gestionar usuarios del sistema de calendario",
+	Short: "User management",
+	Long:  "Commands to manage calendar system users",
 }
 
 // user add
@@ -25,35 +25,35 @@ var userAddCmd = &cobra.Command{
 	Short: "Crear un nuevo usuario",
 	Long: `Crea un nuevo usuario en el sistema.
 
-Ejemplos:
+Examples:
   clical user add --id=12345 --name="Juan Pérez" --timezone="America/Argentina/Buenos_Aires"
   clical user add --id=67890 --name="María García" --timezone="America/Mexico_City"`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// Validar argumentos
+		// Validate arguments
 		if userAddID == "" {
-			return fmt.Errorf("se requiere --id")
+			return fmt.Errorf("--id is required")
 		}
 		if userAddName == "" {
-			return fmt.Errorf("se requiere --name")
+			return fmt.Errorf("--name is required")
 		}
 		if userAddTimezone == "" {
-			return fmt.Errorf("se requiere --timezone")
+			return fmt.Errorf("--timezone is required")
 		}
 
-		// Crear usuario
+		// Create user
 		u := user.NewUser(userAddID, userAddName, userAddTimezone)
 
-		// Validar
+		// Validate
 		if err := u.Validate(); err != nil {
 			return fmt.Errorf("usuario inválido: %w", err)
 		}
 
-		// Guardar
+		// Save
 		if err := store.SaveUser(u); err != nil {
-			return fmt.Errorf("error guardando usuario: %w", err)
+			return fmt.Errorf("error saving usuario: %w", err)
 		}
 
-		fmt.Printf("✓ Usuario creado exitosamente\n\n")
+		fmt.Printf("✓ User created successfully\n\n")
 		fmt.Printf("ID:       %s\n", u.ID)
 		fmt.Printf("Nombre:   %s\n", u.Name)
 		fmt.Printf("Timezone: %s\n", u.Timezone)
@@ -71,7 +71,7 @@ var userListCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		users, err := store.ListUsers()
 		if err != nil {
-			return fmt.Errorf("error listando usuarios: %w", err)
+			return fmt.Errorf("error listing usuarios: %w", err)
 		}
 
 		if len(users) == 0 {
@@ -79,7 +79,7 @@ var userListCmd = &cobra.Command{
 			return nil
 		}
 
-		fmt.Printf("Se encontraron %d usuario(s)\n\n", len(users))
+		fmt.Printf("Found %d usuario(s)\n\n", len(users))
 
 		for _, u := range users {
 			fmt.Printf("ID: %s\n", u.ID)
@@ -101,16 +101,16 @@ var userShowCmd = &cobra.Command{
 	Short: "Mostrar detalles de un usuario",
 	Long: `Muestra información detallada de un usuario.
 
-Ejemplos:
+Examples:
   clical user show --id=12345`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if userShowID == "" {
-			return fmt.Errorf("se requiere --id")
+			return fmt.Errorf("--id is required")
 		}
 
 		u, err := store.GetUser(userShowID)
 		if err != nil {
-			return fmt.Errorf("error obteniendo usuario: %w", err)
+			return fmt.Errorf("error getting user: %w", err)
 		}
 
 		fmt.Printf("═══════════════════════════════════════════\n")
@@ -122,13 +122,13 @@ Ejemplos:
 		fmt.Printf("Creado:   %s\n\n", u.Created.Format("2006-01-02 15:04"))
 
 		fmt.Printf("Configuración:\n")
-		fmt.Printf("  Duración por defecto: %d minutos\n", u.Config.DefaultDuration)
+		fmt.Printf("  Default duration: %d minutes\n", u.Config.DefaultDuration)
 		fmt.Printf("  Formato de fecha:     %s\n", u.Config.DateFormat)
 		fmt.Printf("  Formato de hora:      %s\n", u.Config.TimeFormat)
 
-		firstDay := "Domingo"
+		firstDay := "Sunday"
 		if u.Config.FirstDayOfWeek == 1 {
-			firstDay = "Lunes"
+			firstDay = "Monday"
 		}
 		fmt.Printf("  Primer día semana:    %s\n", firstDay)
 
@@ -140,7 +140,7 @@ func init() {
 	// user add
 	userAddCmd.Flags().StringVar(&userAddID, "id", "", "ID del usuario")
 	userAddCmd.Flags().StringVar(&userAddName, "name", "", "Nombre del usuario")
-	userAddCmd.Flags().StringVar(&userAddTimezone, "timezone", "", "Timezone (ej: America/Argentina/Buenos_Aires)")
+	userAddCmd.Flags().StringVar(&userAddTimezone, "timezone", "", "Timezone (eg: America/Argentina/Buenos_Aires)")
 	userAddCmd.MarkFlagRequired("id")
 	userAddCmd.MarkFlagRequired("name")
 	userAddCmd.MarkFlagRequired("timezone")

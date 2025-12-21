@@ -19,10 +19,10 @@ func entryToMarkdown(entry *calendar.Entry) string {
 	// Metadata principal
 	md.WriteString(fmt.Sprintf("**Fecha:** %s  \n", entry.DateTime.Format("2006-01-02")))
 	md.WriteString(fmt.Sprintf("**Hora:** %s  \n", entry.DateTime.Format("15:04")))
-	md.WriteString(fmt.Sprintf("**Duración:** %d minutos  \n", entry.Duration))
+	md.WriteString(fmt.Sprintf("**Duration:** %d minutos  \n", entry.Duration))
 
 	if entry.Location != "" {
-		md.WriteString(fmt.Sprintf("**Ubicación:** %s  \n", entry.Location))
+		md.WriteString(fmt.Sprintf("**Location:** %s  \n", entry.Location))
 	}
 
 	if len(entry.Tags) > 0 {
@@ -74,15 +74,15 @@ func userToMarkdown(u *user.User) string {
 
 	// Configuración
 	md.WriteString("## Configuración\n\n")
-	md.WriteString(fmt.Sprintf("- **Duración por defecto:** %d minutos\n", u.Config.DefaultDuration))
+	md.WriteString(fmt.Sprintf("- **Default duration:** %d minutos\n", u.Config.DefaultDuration))
 	md.WriteString(fmt.Sprintf("- **Formato de fecha:** %s\n", u.Config.DateFormat))
 	md.WriteString(fmt.Sprintf("- **Formato de hora:** %s\n", u.Config.TimeFormat))
 
-	firstDay := "Domingo"
+	firstDay := "Sunday"
 	if u.Config.FirstDayOfWeek == 1 {
-		firstDay = "Lunes"
+		firstDay = "Monday"
 	}
-	md.WriteString(fmt.Sprintf("- **Primer día de semana:** %s\n", firstDay))
+	md.WriteString(fmt.Sprintf("- **First day of week:** %s\n", firstDay))
 
 	md.WriteString("\n---\n\n")
 	md.WriteString(fmt.Sprintf("*Última actualización: %s*\n", time.Now().Format("2006-01-02")))

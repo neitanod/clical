@@ -19,31 +19,31 @@ var (
 // daily-report command
 var dailyReportCmd = &cobra.Command{
 	Use:   "daily-report",
-	Short: "Reporte diario completo del calendario",
-	Long: `Genera un reporte diario completo optimizado para asistencia de IA.
+	Short: "Complete daily calendar report",
+	Long: `Generate complete daily report optimized for AI assistance.
 
-Incluye:
-- Resumen del día (eventos, horas ocupadas, tiempo libre)
-- Próximo evento inmediato
-- Agenda completa del día
-- Bloques de tiempo libre
-- Vista previa del día siguiente
-- Sugerencias de organización
+Includes:
+- Day summary (events, busy hours, free time)
+- Next immediate event
+- Complete day agenda
+- Free time blocks
+- Next day preview
+- Organization suggestions
 
-Ejemplos:
+Examples:
   clical daily-report --user=12345
   clical daily-report --user=12345 --date="2025-11-21"`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if userID == "" {
-			return fmt.Errorf("se requiere --user")
+			return fmt.Errorf("--user is required")
 		}
 
-		// Parsear fecha (default hoy)
+		// Parse date (default today)
 		date := time.Now()
 		if dailyReportDate != "" {
 			parsed, err := time.Parse("2006-01-02", dailyReportDate)
 			if err != nil {
-				return fmt.Errorf("error parseando --date: %w", err)
+				return fmt.Errorf("error parsing --date: %w", err)
 			}
 			date = parsed
 		}
@@ -51,7 +51,7 @@ Ejemplos:
 		// Generar reporte
 		report, err := reporter.GenerateDailyReport(store, userID, date)
 		if err != nil {
-			return fmt.Errorf("error generando reporte: %w", err)
+			return fmt.Errorf("error generating reporte: %w", err)
 		}
 
 		// Formatear y mostrar
@@ -65,25 +65,25 @@ Ejemplos:
 // tomorrow-report command
 var tomorrowReportCmd = &cobra.Command{
 	Use:   "tomorrow-report",
-	Short: "Reporte de eventos de mañana",
-	Long: `Genera un reporte con vista previa del día siguiente.
+	Short: "Tomorrow's events report",
+	Long: `Generate report with next day preview.
 
-Útil para ejecutar al final del día (ej: 8pm) para prepararse para mañana.
+Useful to run at end of day (eg: 8pm) to prepare for tomorrow.
 
-Ejemplos:
+Examples:
   clical tomorrow-report --user=12345`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if userID == "" {
-			return fmt.Errorf("se requiere --user")
+			return fmt.Errorf("--user is required")
 		}
 
-		// Mañana
+		// Tomorrow
 		tomorrow := time.Now().Add(24 * time.Hour)
 
-		// Generar reporte de mañana
+		// Generate tomorrow report
 		report, err := reporter.GenerateDailyReport(store, userID, tomorrow)
 		if err != nil {
-			return fmt.Errorf("error generando reporte: %w", err)
+			return fmt.Errorf("error generating reporte: %w", err)
 		}
 
 		// Formatear y mostrar
@@ -97,17 +97,17 @@ Ejemplos:
 // upcoming-report command
 var upcomingReportCmd = &cobra.Command{
 	Use:   "upcoming-report",
-	Short: "Reporte de próximos eventos",
-	Long: `Muestra los próximos eventos en las siguientes horas.
+	Short: "Upcoming events report",
+	Long: `Show upcoming events in the next hours.
 
-Útil para ejecutar periódicamente (ej: cada hora) para recordar eventos próximos.
+Useful to run periodically (eg: hourly) to remind of upcoming events.
 
-Ejemplos:
+Examples:
   clical upcoming-report --user=12345 --hours=2
   clical upcoming-report --user=12345 --count=5`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if userID == "" {
-			return fmt.Errorf("se requiere --user")
+			return fmt.Errorf("--user is required")
 		}
 
 		var events []*calendar.Entry
@@ -129,10 +129,10 @@ Ejemplos:
 		}
 
 		if err != nil {
-			return fmt.Errorf("error obteniendo eventos: %w", err)
+			return fmt.Errorf("error getting events: %w", err)
 		}
 
-		// Mostrar eventos
+		// Show events
 		if len(events) == 0 {
 			fmt.Printf("No hay eventos próximos en las siguientes %d horas\n", upcomingHours)
 			return nil
@@ -147,7 +147,7 @@ Ejemplos:
 				continue // Skip eventos que ya empezaron
 			}
 
-			fmt.Printf("⏰ **En %d minutos** (%s)\n", minutesUntil, event.DateTime.Format("15:04"))
+			fmt.Printf("⏰ **In %d minutes** (%s)\n", minutesUntil, event.DateTime.Format("15:04"))
 			fmt.Printf("   %s (%d min)\n", event.Title, event.Duration)
 			fmt.Printf("   🆔 %s\n", event.ID)
 
@@ -169,56 +169,56 @@ Ejemplos:
 // weekly-report command
 var weeklyReportCmd = &cobra.Command{
 	Use:   "weekly-report",
-	Short: "Reporte semanal del calendario",
-	Long: `Genera un reporte con vista de la semana.
+	Short: "Weekly calendar report",
+	Long: `Generate report with week view.
 
-Útil para ejecutar al inicio de semana (lunes) para planificar.
+Useful to run at start of week (Monday) for planning.
 
-Ejemplos:
+Examples:
   clical weekly-report --user=12345`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if userID == "" {
-			return fmt.Errorf("se requiere --user")
+			return fmt.Errorf("--user is required")
 		}
 
-		// Inicio y fin de semana
+		// Start and end of week
 		now := time.Now()
 		weekday := int(now.Weekday())
 		if weekday == 0 {
-			weekday = 7 // Domingo = 7
+			weekday = 7 // Sunday = 7
 		}
 
-		// Lunes de esta semana
+		// Monday of this week
 		monday := now.AddDate(0, 0, -(weekday - 1))
 		monday = time.Date(monday.Year(), monday.Month(), monday.Day(), 0, 0, 0, 0, monday.Location())
 
-		// Domingo de esta semana
+		// Sunday of this week
 		sunday := monday.AddDate(0, 0, 7)
 
-		// Obtener eventos de la semana
+		// Get week events
 		filter := calendar.NewFilter()
 		filter.WithDateRange(monday, sunday)
 		events, err := store.ListEntries(userID, filter)
 		if err != nil {
-			return fmt.Errorf("error obteniendo eventos: %w", err)
+			return fmt.Errorf("error getting events: %w", err)
 		}
 
-		// Mostrar reporte
+		// Show report
 		fmt.Printf("# Reporte Semanal: %s al %s\n\n",
 			monday.Format("2006-01-02"),
 			sunday.Format("2006-01-02"))
 
 		fmt.Printf("**Total de eventos:** %d\n\n", len(events))
 
-		// Agrupar por día
+		// Group by day
 		eventsByDay := make(map[string][]*calendar.Entry)
 		for _, event := range events {
 			day := event.DateTime.Format("2006-01-02")
 			eventsByDay[day] = append(eventsByDay[day], event)
 		}
 
-		// Mostrar cada día
-		weekdays := []string{"Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"}
+		// Show each day
+		weekdays := []string{"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"}
 		currentDay := monday
 
 		for i := 0; i < 7; i++ {
@@ -228,7 +228,7 @@ Ejemplos:
 			fmt.Printf("## %s %s\n\n", weekdays[i], currentDay.Format("02/01"))
 
 			if len(dayEvents) == 0 {
-				fmt.Printf("*Sin eventos*\n\n")
+				fmt.Printf("*No events*\n\n")
 			} else {
 				for _, event := range dayEvents {
 					fmt.Printf("- [%s] %s (%d min) [ID: %s]\n",
@@ -247,17 +247,122 @@ Ejemplos:
 	},
 }
 
+// yesterday-today-report command
+var yesterdayTodayReportCmd = &cobra.Command{
+	Use:   "yesterday-today-report",
+	Short: "Yesterday and today events report",
+	Long: `Generate combined report with yesterday and today events (48 hours).
+
+Useful to get complete context of last 48 hours.
+
+Examples:
+  clical yesterday-today-report --user=12345`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if userID == "" {
+			return fmt.Errorf("--user is required")
+		}
+
+		now := time.Now()
+		today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+		yesterday := today.Add(-24 * time.Hour)
+		tomorrow := today.Add(24 * time.Hour)
+
+		// Create filter for yesterday + today
+		filter := calendar.NewFilter()
+		filter.From = &yesterday
+		filter.To = &tomorrow
+
+		// Get events
+		entries, err := store.ListEntries(userID, filter)
+		if err != nil {
+			return fmt.Errorf("error listing eventos: %w", err)
+		}
+
+		// Generar reporte
+		fmt.Println("# REPORT: YESTERDAY + TODAY")
+		fmt.Println()
+		fmt.Printf("Period: %s - %s\n", yesterday.Format("2006-01-02"), today.Format("2006-01-02"))
+		fmt.Println()
+
+		if len(entries) == 0 {
+			fmt.Println("No events in this period")
+			return nil
+		}
+
+		// Separate events by day
+		var yesterdayEvents []*calendar.Entry
+		var todayEvents []*calendar.Entry
+
+		for _, entry := range entries {
+			// Normalize to same location for comparison
+			entryDate := time.Date(entry.DateTime.Year(), entry.DateTime.Month(), entry.DateTime.Day(), 0, 0, 0, 0, now.Location())
+			if entryDate.Equal(yesterday) {
+				yesterdayEvents = append(yesterdayEvents, entry)
+			} else if entryDate.Equal(today) {
+				todayEvents = append(todayEvents, entry)
+			}
+		}
+
+		// Show events de ayer
+		fmt.Printf("## YESTERDAY (%s)\n\n", yesterday.Format("Monday, 02 Jan 2006"))
+		if len(yesterdayEvents) == 0 {
+			fmt.Println("No events")
+		} else {
+			for _, event := range yesterdayEvents {
+				fmt.Printf("- [%s] %s", event.DateTime.Format("15:04"), event.Title)
+				if event.Duration > 0 {
+					fmt.Printf(" (%d min)", event.Duration)
+				}
+				fmt.Printf(" [ID: %s]", event.ID)
+				if event.Location != "" {
+					fmt.Printf(" - %s", event.Location)
+				}
+				fmt.Println()
+			}
+		}
+		fmt.Println()
+
+		// Show events de hoy
+		fmt.Printf("## TODAY (%s)\n\n", today.Format("Monday, 02 Jan 2006"))
+		if len(todayEvents) == 0 {
+			fmt.Println("No events")
+		} else {
+			for _, event := range todayEvents {
+				fmt.Printf("- [%s] %s", event.DateTime.Format("15:04"), event.Title)
+				if event.Duration > 0 {
+					fmt.Printf(" (%d min)", event.Duration)
+				}
+				fmt.Printf(" [ID: %s]", event.ID)
+				if event.Location != "" {
+					fmt.Printf(" - %s", event.Location)
+				}
+				fmt.Println()
+			}
+		}
+		fmt.Println()
+
+		// Resumen
+		fmt.Println("## SUMMARY")
+		fmt.Printf("- Total events: %d\n", len(entries))
+		fmt.Printf("- Yesterday events: %d\n", len(yesterdayEvents))
+		fmt.Printf("- Today events: %d\n", len(todayEvents))
+
+		return nil
+	},
+}
+
 func init() {
 	// daily-report
-	dailyReportCmd.Flags().StringVar(&dailyReportDate, "date", "", "Fecha para el reporte (YYYY-MM-DD, default: hoy)")
+	dailyReportCmd.Flags().StringVar(&dailyReportDate, "date", "", "Report date (YYYY-MM-DD, default: today)")
 
 	// upcoming-report
-	upcomingReportCmd.Flags().IntVar(&upcomingHours, "hours", 2, "Horas hacia adelante para buscar eventos")
-	upcomingReportCmd.Flags().IntVar(&upcomingCount, "count", 0, "Mostrar próximos N eventos (sobrescribe --hours)")
+	upcomingReportCmd.Flags().IntVar(&upcomingHours, "hours", 2, "Hours ahead to search for events")
+	upcomingReportCmd.Flags().IntVar(&upcomingCount, "count", 0, "Show next N events (overrides --hours)")
 
 	// Agregar a root
 	rootCmd.AddCommand(dailyReportCmd)
 	rootCmd.AddCommand(tomorrowReportCmd)
 	rootCmd.AddCommand(upcomingReportCmd)
 	rootCmd.AddCommand(weeklyReportCmd)
+	rootCmd.AddCommand(yesterdayTodayReportCmd)
 }

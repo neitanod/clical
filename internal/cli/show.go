@@ -11,27 +11,27 @@ var showID string
 
 var showCmd = &cobra.Command{
 	Use:   "show",
-	Short: "Mostrar detalles de un evento",
+	Short: "Show event details",
 	Long: `Muestra todos los detalles de un evento específico.
 
-Ejemplos:
+Examples:
   clical show --user=12345 --id=abc123def456`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// Validar argumentos
+		// Validate arguments
 		if userID == "" {
-			return fmt.Errorf("se requiere --user")
+			return fmt.Errorf("--user is required")
 		}
 		if showID == "" {
-			return fmt.Errorf("se requiere --id")
+			return fmt.Errorf("--id is required")
 		}
 
-		// Obtener evento
+		// Get event
 		entry, err := store.GetEntry(userID, showID)
 		if err != nil {
-			return fmt.Errorf("error obteniendo evento: %w", err)
+			return fmt.Errorf("error getting event: %w", err)
 		}
 
-		// Mostrar detalles completos
+		// Show complete details
 		fmt.Printf("═══════════════════════════════════════════\n")
 		fmt.Printf(" %s\n", entry.Title)
 		fmt.Printf("═══════════════════════════════════════════\n\n")
@@ -39,7 +39,7 @@ Ejemplos:
 		fmt.Printf("ID:        %s\n", entry.ID)
 		fmt.Printf("Fecha:     %s\n", entry.DateTime.Format("2006-01-02"))
 		fmt.Printf("Hora:      %s\n", entry.DateTime.Format("15:04"))
-		fmt.Printf("Duración:  %d minutos\n", entry.Duration)
+		fmt.Printf("Duration:  %d minutes\n", entry.Duration)
 		fmt.Printf("Fin:       %s\n", entry.EndTime().Format("15:04"))
 
 		if entry.Location != "" {
