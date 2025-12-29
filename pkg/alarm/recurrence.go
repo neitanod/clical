@@ -154,3 +154,11 @@ func CurrentYearlyFilename(t time.Time) string {
 func RoundToMinute(t time.Time) time.Time {
 	return time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), 0, 0, t.Location())
 }
+
+// ExecutionFilename retorna el nombre de archivo para una ejecución de alarma recurrente
+// Formato: 2025-12-21_00-59-00.json
+// Este formato permite identificar cuándo se disparó la alarma para evitar duplicados
+func ExecutionFilename(t time.Time) string {
+	return fmt.Sprintf("%04d-%02d-%02d_%02d-%02d-00.json",
+		t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute())
+}

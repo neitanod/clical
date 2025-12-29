@@ -136,35 +136,64 @@ func (fs *FilesystemStorage) CheckAlarms(userID string, at time.Time) ([]*alarm.
 		}
 	}
 
-	// 2. Chequear alarmas daily
-	filename := alarm.CurrentDailyFilename(roundedTime)
-	if err := fs.checkRecurringAlarm(userID, alarm.RecurrenceDaily, filename, roundedTime, &result); err != nil {
-		return nil, err
-	}
-
-	// 3. Chequear alarmas weekly
-	filename = alarm.CurrentWeeklyFilename(roundedTime)
-	if err := fs.checkRecurringAlarm(userID, alarm.RecurrenceWeekly, filename, roundedTime, &result); err != nil {
-		return nil, err
-	}
-
-	// 4. Chequear alarmas monthly
-	filename = alarm.CurrentMonthlyFilename(roundedTime)
-	if err := fs.checkRecurringAlarm(userID, alarm.RecurrenceMonthly, filename, roundedTime, &result); err != nil {
-		return nil, err
-	}
-
-	// 5. Chequear alarmas yearly
-	filename = alarm.CurrentYearlyFilename(roundedTime)
-	if err := fs.checkRecurringAlarm(userID, alarm.RecurrenceYearly, filename, roundedTime, &result); err != nil {
+	// 2. Chequear alarmas recurrentes (daily, weekly, monthly, yearly) con recovery de 60 minutos
+	if err := fs.checkRecurringAlarmsWithRecovery(userID, roundedTime, &result); err != nil {
 		return nil, err
 	}
 
 	return result, nil
 }
 
-// checkRecurringAlarm es un helper para chequear alarmas recurrentes
-func (fs *FilesystemStorage) checkRecurringAlarm(userID string, recurrence alarm.Recurrence, filename string, at time.Time, result *[]*alarm.Alarm) error {
+// checkRecurringAlarmsWithRecovery chequea alarmas recurrentes con recovery de 60 minutos
+func (fs *FilesystemStorage) checkRecurringAlarmsWithRecovery(userID string, roundedTime time.Time, result *[]*alarm.Alarm) error {
+	recurrenceTypes := []alarm.Recurrence{
+		alarm.RecurrenceDaily,
+		alarm.RecurrenceWeekly,
+		alarm.RecurrenceMonthly,
+		alarm.RecurrenceYearly,
+	}
+
+	// Para cada tipo de recurrencia, chequear últimos 60 minutos
+	for _, recurrence := range recurrenceTypes {
+		for i := 0; i <= 60; i++ {
+			checkTime := roundedTime.Add(-time.Duration(i) * time.Minute)
+
+			// Verificar si ya fue ejecutada en este momento
+			wasExecuted, err := fs.WasRecurringAlarmExecuted(userID, recurrence, checkTime)
+			if err != nil {
+				return fmt.Errorf("error checking execution record: %w", err)
+			}
+
+			if wasExecuted {
+				// Ya fue ejecutada, omitir
+				continue
+			}
+
+			// Obtener el filename correspondiente al checkTime
+			var filename string
+			switch recurrence {
+			case alarm.RecurrenceDaily:
+				filename = alarm.CurrentDailyFilename(checkTime)
+			case alarm.RecurrenceWeekly:
+				filename = alarm.CurrentWeeklyFilename(checkTime)
+			case alarm.RecurrenceMonthly:
+				filename = alarm.CurrentMonthlyFilename(checkTime)
+			case alarm.RecurrenceYearly:
+				filename = alarm.CurrentYearlyFilename(checkTime)
+			}
+
+			// Chequear si existe el archivo
+			if err := fs.checkAndExecuteRecurringAlarm(userID, recurrence, filename, checkTime, result); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+// checkAndExecuteRecurringAlarm chequea y ejecuta una alarma recurrente
+func (fs *FilesystemStorage) checkAndExecuteRecurringAlarm(userID string, recurrence alarm.Recurrence, filename string, at time.Time, result *[]*alarm.Alarm) error {
 	ap := NewAlarmPaths(fs.dataDir, userID)
 	filePath := ap.RecurringFile(recurrence, filename)
 
@@ -174,7 +203,13 @@ func (fs *FilesystemStorage) checkRecurringAlarm(userID string, recurrence alarm
 			return err
 		}
 
+		if len(alarms) == 0 {
+			return nil
+		}
+
 		hasExpired := false
+		activeAlarms := []*alarm.Alarm{}
+
 		for _, alm := range alarms {
 			alm.WithScheduledFor(at)
 
@@ -183,15 +218,23 @@ func (fs *FilesystemStorage) checkRecurringAlarm(userID string, recurrence alarm
 				*result = append(*result, alm)
 				hasExpired = true
 			} else {
-				// No expirada, ejecutar pero no mover
+				// No expirada, ejecutar
 				*result = append(*result, alm)
+				activeAlarms = append(activeAlarms, alm)
+			}
+		}
+
+		// Copiar registro de ejecución a past/ para evitar duplicados
+		if len(activeAlarms) > 0 {
+			if err := fs.CopyRecurringAlarmExecution(userID, recurrence, activeAlarms, at); err != nil {
+				return fmt.Errorf("error copying execution record: %w", err)
 			}
 		}
 
 		// Si alguna alarma expiró, mover archivo completo a past/
 		if hasExpired {
 			if err := fs.MoveAlarmsToPast(userID, recurrence, filename); err != nil {
-				return fmt.Errorf("error moviendo alarma recurrente a past: %w", err)
+				return fmt.Errorf("error moving expired alarm to past: %w", err)
 			}
 		}
 	}
@@ -398,6 +441,55 @@ func (fs *FilesystemStorage) MoveAlarmsToPast(userID string, recurrence alarm.Re
 	}
 
 	return nil
+}
+
+// CopyRecurringAlarmExecution copia las alarmas recurrentes a past/ con timestamp de ejecución
+// Esto permite rastrear cuándo se disparó cada alarma recurrente y evitar duplicados
+func (fs *FilesystemStorage) CopyRecurringAlarmExecution(userID string, recurrence alarm.Recurrence, alarms []*alarm.Alarm, executedAt time.Time) error {
+	if len(alarms) == 0 {
+		return nil
+	}
+
+	ap := NewAlarmPaths(fs.dataDir, userID)
+
+	// Generar nombre de archivo con timestamp de ejecución
+	executionFilename := alarm.ExecutionFilename(executedAt)
+	dstPath := ap.PastFile(recurrence, executionFilename)
+
+	// Asegurar que el directorio de destino existe
+	dstDir := filepath.Dir(dstPath)
+	if err := os.MkdirAll(dstDir, 0755); err != nil {
+		return fmt.Errorf("error creating past directory: %w", err)
+	}
+
+	// Serializar alarmas
+	jsonData, err := json.MarshalIndent(alarms, "", "  ")
+	if err != nil {
+		return fmt.Errorf("error serializing alarms: %w", err)
+	}
+
+	// Escribir archivo
+	if err := os.WriteFile(dstPath, jsonData, 0644); err != nil {
+		return fmt.Errorf("error writing execution record: %w", err)
+	}
+
+	return nil
+}
+
+// WasRecurringAlarmExecuted verifica si una alarma recurrente ya fue ejecutada en un momento dado
+func (fs *FilesystemStorage) WasRecurringAlarmExecuted(userID string, recurrence alarm.Recurrence, executedAt time.Time) (bool, error) {
+	ap := NewAlarmPaths(fs.dataDir, userID)
+	executionFilename := alarm.ExecutionFilename(executedAt)
+	executionPath := ap.PastFile(recurrence, executionFilename)
+
+	// Si el archivo existe, la alarma ya fue ejecutada
+	if _, err := os.Stat(executionPath); err == nil {
+		return true, nil
+	} else if os.IsNotExist(err) {
+		return false, nil
+	} else {
+		return false, fmt.Errorf("error checking execution record: %w", err)
+	}
 }
 
 // extractUserIDFromPath extrae el userID de una ruta de archivo

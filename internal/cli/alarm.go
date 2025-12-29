@@ -354,6 +354,7 @@ func addYearlyAlarm(userID, scheduleStr, context, expiresStr string) error {
 // alarm-check
 var (
 	alarmCheckVerbose bool
+	alarmCheckJSON    bool
 )
 
 var alarmCheckCmd = &cobra.Command{
@@ -367,7 +368,8 @@ If no alarms, produces no output (silent).
 
 Examples:
   clical alarm check --user alice
-  clical alarm check --user alice --verbose`,
+  clical alarm check --user alice --verbose
+  clical alarm check --user alice --json`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if userID == "" {
 			return fmt.Errorf("--user is required")
@@ -388,16 +390,47 @@ Examples:
 			return nil
 		}
 
-		// Emitir JSON a stdout
-		jsonData, err := json.MarshalIndent(alarms, "", "  ")
-		if err != nil {
-			return fmt.Errorf("error serializing alarmas: %w", err)
+		// Output en JSON o texto
+		if alarmCheckJSON {
+			// Emitir JSON a stdout
+			jsonData, err := json.MarshalIndent(alarms, "", "  ")
+			if err != nil {
+				return fmt.Errorf("error serializing alarms: %w", err)
+			}
+			fmt.Println(string(jsonData))
+		} else {
+			// Emitir reporte en texto
+			for _, alm := range alarms {
+				fmt.Printf("=== %s\n", alm.Context)
+				fmt.Printf("    ID: %s\n", alm.ID)
+				fmt.Printf("    Recurrence: %s\n", capitalizeRecurrence(alm.Recurrence))
+				if !alm.ScheduledFor.IsZero() {
+					fmt.Printf("    Scheduled for: %s\n", alm.ScheduledFor.Format("2006-01-02T15:04:05-07:00"))
+				}
+				fmt.Println()
+			}
 		}
-
-		fmt.Println(string(jsonData))
 
 		return nil
 	},
+}
+
+// capitalizeRecurrence capitaliza el tipo de recurrencia para display
+func capitalizeRecurrence(r alarm.Recurrence) string {
+	switch r {
+	case alarm.RecurrenceOnce:
+		return "One-time"
+	case alarm.RecurrenceDaily:
+		return "Daily"
+	case alarm.RecurrenceWeekly:
+		return "Weekly"
+	case alarm.RecurrenceMonthly:
+		return "Monthly"
+	case alarm.RecurrenceYearly:
+		return "Yearly"
+	default:
+		return string(r)
+	}
 }
 
 // alarm-list
@@ -559,6 +592,7 @@ func init() {
 
 	// alarm check
 	alarmCheckCmd.Flags().BoolVarP(&alarmCheckVerbose, "verbose", "v", false, "Show debugging logs")
+	alarmCheckCmd.Flags().BoolVar(&alarmCheckJSON, "json", false, "Output in JSON format")
 
 	// alarm list
 	alarmListCmd.Flags().BoolVar(&alarmListPast, "past", false, "Include past alarms")
