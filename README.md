@@ -1,255 +1,257 @@
+**English** · [Español](README.es.md)
+
 # clical
 
-**clical** es un sistema de calendario multiusuario con interfaz de línea de comandos (CLI), diseñado para ser asistido por Inteligencia Artificial.
+**clical** is a multi-user calendar system with a command-line interface (CLI), designed to be AI-assisted.
 
-## Características Principales
+## Main Features
 
-- 🗓️ **Calendario CLI multiusuario** - Gestión completa de eventos por línea de comandos
-- 📝 **Almacenamiento en Markdown + JSON** - Archivos legibles y editables manualmente
-- 🤖 **Optimizado para asistencia de IA** - Reportes diseñados para que una IA ayude proactivamente
-- 📁 **Organización jerárquica** - Eventos organizados por año/mes/día
-- 🔍 **Búsqueda y filtrado** - Potentes capacidades de búsqueda
-- 📊 **Reportes inteligentes** - Daily, weekly, upcoming reports para IA
-- ⏰ **Compatible con cron** - Ejecución programada de reportes
+- 🗓️ **Multi-user CLI calendar** - Full event management from the command line
+- 📝 **Markdown + JSON storage** - Human-readable, manually editable files
+- 🤖 **Optimized for AI assistance** - Reports designed for an AI to help proactively
+- 📁 **Hierarchical organization** - Events organized by year/month/day
+- 🔍 **Search and filtering** - Powerful search capabilities
+- 📊 **Smart reports** - Daily, weekly and upcoming reports for AI consumption
+- ⏰ **Cron-compatible** - Scheduled report execution
 
-## Instalación
+## Installation
 
-### Desde código fuente (Linux / macOS)
+### From source (Linux / macOS)
 
 ```bash
-# Clonar repositorio
-git clone https://github.com/sebasvalencia/clical.git
+# Clone the repository
+git clone https://github.com/neitanod/clical.git
 cd clical
 
-# Compilar
+# Build
 make build
 
-# Instalar en /usr/local/bin (opcional)
+# Install to /usr/local/bin (optional)
 make install-system
 ```
 
-### Desde código fuente (Windows)
+### From source (Windows)
 
-En Windows usá los scripts PowerShell equivalentes (no requieren `make`):
+On Windows use the equivalent PowerShell scripts (no `make` required):
 
 ```powershell
-git clone https://github.com/sebasvalencia/clical.git
+git clone https://github.com/neitanod/clical.git
 cd clical
 
-# Compilar (genera .\clical.exe)
+# Build (produces .\clical.exe)
 .\build.ps1
 
-# Instalar en %USERPROFILE%\go\bin (opcional)
+# Install to %USERPROFILE%\go\bin (optional)
 .\install.ps1
 ```
 
-Para que el comando `clical` esté disponible en cualquier terminal, asegurate
-de que `%USERPROFILE%\go\bin` esté en tu `PATH` de usuario.
+For `clical` to be available in any terminal, make sure
+`%USERPROFILE%\go\bin` is in your user `PATH`.
 
-### Instalación asistida por un agente de IA
+### AI-agent-assisted installation
 
-Si usás un agente con acceso a tu terminal (Claude Code, Cursor, etc.), podés
-instalar clical pegándole el siguiente prompt:
+If you use an agent with terminal access (Claude Code, Cursor, etc.), you can
+install clical by pasting this prompt:
 
 <https://github.com/neitanod/clical/blob/main/install_prompt.md>
 
-El prompt guía al agente para detectar el sistema operativo, verificar
-requisitos, clonar, compilar e instalar tanto en Linux/macOS como en Windows.
+The prompt guides the agent through OS detection, requirement checks, cloning,
+building and installing on Linux/macOS or Windows.
 
-### Requisitos
+### Requirements
 
-- Go 1.23 o superior
+- Go 1.23 or higher
 
-## Uso Rápido
+## Quick Start
 
-### 1. Crear un usuario
+### 1. Create a user
 
 ```bash
-clical user add --id=12345 --name="Tu Nombre" --timezone="America/Argentina/Buenos_Aires"
+clical user add --id=12345 --name="Your Name" --timezone="America/Argentina/Buenos_Aires"
 ```
 
-### 2. Agregar un evento
+### 2. Add an event
 
 ```bash
 clical add --user=12345 \
   --datetime="2025-11-21 14:00" \
-  --title="Reunión con cliente" \
+  --title="Client meeting" \
   --duration=60 \
-  --location="Oficina Central" \
-  --notes="Revisar propuesta Q4"
+  --location="Main Office" \
+  --notes="Review Q4 proposal"
 ```
 
-### 3. Listar eventos
+### 3. List events
 
 ```bash
-# Todos los eventos
+# All events
 clical list --user=12345
 
-# Eventos de hoy
+# Today's events
 clical list --user=12345 --range=today
 
-# Eventos de esta semana
+# This week's events
 clical list --user=12345 --range=week
 ```
 
-### 4. Ver reporte diario
+### 4. View daily report
 
 ```bash
 clical daily-report --user=12345
 ```
 
-## Comandos Disponibles
+## Available Commands
 
-### Gestión de Usuarios
+### User Management
 
 ```bash
-# Crear usuario
-clical user add --id=ID --name="Nombre" --timezone="Timezone"
+# Create user
+clical user add --id=ID --name="Name" --timezone="Timezone"
 
-# Listar usuarios
+# List users
 clical user list
 
-# Ver detalles de usuario
+# Show user details
 clical user show --id=ID
 ```
 
-### Gestión de Eventos
+### Event Management
 
 ```bash
-# Agregar evento
-clical add --user=ID --datetime="YYYY-MM-DD HH:MM" --title="Título" [opciones]
+# Add event
+clical add --user=ID --datetime="YYYY-MM-DD HH:MM" --title="Title" [options]
 
-# Listar eventos
-clical list --user=ID [--from=FECHA] [--to=FECHA] [--range=RANGO] [--tags=TAG1,TAG2]
+# List events
+clical list --user=ID [--from=DATE] [--to=DATE] [--range=RANGE] [--tags=TAG1,TAG2]
 
-# Ver evento
+# Show event
 clical show --user=ID --id=EVENT_ID
 
-# Editar evento
-clical edit --user=ID --id=EVENT_ID [--title="Nuevo"] [--datetime="YYYY-MM-DD HH:MM"]
+# Edit event
+clical edit --user=ID --id=EVENT_ID [--title="New"] [--datetime="YYYY-MM-DD HH:MM"]
 
-# Eliminar evento
+# Delete event
 clical delete --user=ID --id=EVENT_ID [--force]
 ```
 
-### Reportes para IA
+### AI Reports
 
 ```bash
-# Reporte diario completo
+# Full daily report
 clical daily-report --user=ID [--date=YYYY-MM-DD]
 
-# Reporte de mañana
+# Tomorrow's report
 clical tomorrow-report --user=ID
 
-# Próximos eventos
+# Upcoming events
 clical upcoming-report --user=ID --hours=2
 clical upcoming-report --user=ID --count=5
 
-# Reporte semanal
+# Weekly report
 clical weekly-report --user=ID
 ```
 
-### Otros
+### Other
 
 ```bash
-# Versión
+# Version
 clical version
 
-# Ayuda
+# Help
 clical --help
-clical COMANDO --help
+clical COMMAND --help
 ```
 
-## Uso con Cron
+## Using with Cron
 
-### Reportes automáticos
+### Automatic reports
 
-Editar crontab:
+Edit your crontab:
 
 ```bash
 crontab -e
 ```
 
-Agregar líneas:
+Add lines like:
 
 ```bash
-# Reporte diario a las 7:00 AM
-0 7 * * * /usr/local/bin/clical daily-report --user=12345 | mail -s "Agenda de Hoy" tu@email.com
+# Daily report at 7:00 AM
+0 7 * * * /usr/local/bin/clical daily-report --user=12345 | mail -s "Today's Agenda" you@email.com
 
-# Reporte de mañana a las 8:00 PM
-0 20 * * * /usr/local/bin/clical tomorrow-report --user=12345 | mail -s "Agenda de Mañana" tu@email.com
+# Tomorrow's report at 8:00 PM
+0 20 * * * /usr/local/bin/clical tomorrow-report --user=12345 | mail -s "Tomorrow's Agenda" you@email.com
 
-# Alertas cada hora durante horario laboral
-0 9-18 * * * /usr/local/bin/clical upcoming-report --user=12345 --hours=2 | mail -s "Próximos Eventos" tu@email.com
+# Hourly alerts during work hours
+0 9-18 * * * /usr/local/bin/clical upcoming-report --user=12345 --hours=2 | mail -s "Upcoming Events" you@email.com
 
-# Reporte semanal los lunes a las 7:00 AM
-0 7 * * 1 /usr/local/bin/clical weekly-report --user=12345 | mail -s "Agenda Semanal" tu@email.com
+# Weekly report on Mondays at 7:00 AM
+0 7 * * 1 /usr/local/bin/clical weekly-report --user=12345 | mail -s "Weekly Agenda" you@email.com
 ```
 
-### Integración con Telegram (si tienes un bot)
+### Telegram integration (if you have a bot)
 
 ```bash
-# Reporte diario por Telegram
-0 7 * * * OUTPUT=$(/usr/local/bin/clical daily-report --user=12345); [ -n "$OUTPUT" ] && tu-comando-telegram "$OUTPUT"
+# Daily report via Telegram
+0 7 * * * OUTPUT=$(/usr/local/bin/clical daily-report --user=12345); [ -n "$OUTPUT" ] && your-telegram-command "$OUTPUT"
 ```
 
-## Formato de Almacenamiento
+## Storage Format
 
-Los datos se guardan en `~/.clical/data/` (configurable con `--data-dir`):
+Data is stored under `~/.clical/data/` (configurable with `--data-dir`):
 
 ```
 ~/.clical/data/
 └── users/
     └── 12345/
-        ├── user.md              # Info del usuario (Markdown)
-        ├── user.json            # Metadata del usuario
+        ├── user.md              # User info (Markdown)
+        ├── user.json            # User metadata
         ├── events/
         │   └── 2025/
         │       └── 11/
         │           └── 21/
         │               ├── 09-00-stand-up-meeting.md
         │               ├── 09-00-stand-up-meeting.json
-        │               ├── 14-00-reunion-con-cliente.md
-        │               └── 14-00-reunion-con-cliente.json
+        │               ├── 14-00-client-meeting.md
+        │               └── 14-00-client-meeting.json
         └── .state/
             └── report-state.json
 ```
 
-### Ejemplo de archivo Markdown
+### Markdown file example
 
 ```markdown
-# Reunión con cliente
+# Client meeting
 
-**Fecha:** 2025-11-21
-**Hora:** 14:00
-**Duración:** 60 minutos
-**Ubicación:** Oficina Central
-**Tags:** #trabajo #cliente
+**Date:** 2025-11-21
+**Time:** 14:00
+**Duration:** 60 minutes
+**Location:** Main Office
+**Tags:** #work #client
 
-## Notas
+## Notes
 
-Revisar propuesta Q4 y discutir timeline.
+Review Q4 proposal and discuss timeline.
 
 ---
 
-*Creado: 2025-11-20 16:18*
-*Actualizado: 2025-11-20 16:18*
+*Created: 2025-11-20 16:18*
+*Updated: 2025-11-20 16:18*
 *ID: e36e10014ea57372*
 ```
 
-## Configuración
+## Configuration
 
-### Variables de Entorno
+### Environment Variables
 
 ```bash
-# Directorio de datos (default: ~/.clical/data)
-export CLICAL_DATA_DIR="/ruta/personalizada/data"
+# Data directory (default: ~/.clical/data)
+export CLICAL_DATA_DIR="/custom/path/data"
 
-# Usuario por defecto
+# Default user
 export CLICAL_USER_ID="12345"
 ```
 
-### Timezones Comunes
+### Common Timezones
 
 - `America/Argentina/Buenos_Aires`
 - `America/Mexico_City`
@@ -257,48 +259,48 @@ export CLICAL_USER_ID="12345"
 - `Europe/Madrid`
 - `UTC`
 
-Lista completa: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+Full list: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 
-## Uso con IA
+## Using with AI
 
-clical está diseñado para que una IA te asista proactivamente. Ejemplo de flujo:
+clical is designed for an AI to assist you proactively. Example flow:
 
-1. **07:00 AM** - Cron ejecuta `daily-report`
-   - IA recibe agenda del día
-   - IA saluda y presenta eventos
-   - IA identifica tareas pendientes
-   - IA sugiere organización
+1. **07:00 AM** - Cron runs `daily-report`
+   - AI receives today's agenda
+   - AI greets you and presents the events
+   - AI identifies pending tasks
+   - AI suggests how to organize the day
 
-2. **Durante el día** - Cron ejecuta `upcoming-report` cada hora
-   - IA alerta eventos próximos
-   - IA recuerda preparación necesaria
+2. **During the day** - Cron runs `upcoming-report` every hour
+   - AI alerts you about imminent events
+   - AI reminds you of needed preparation
 
-3. **20:00 PM** - Cron ejecuta `tomorrow-report`
-   - IA presenta vista de mañana
-   - IA sugiere preparación nocturna
+3. **20:00 PM** - Cron runs `tomorrow-report`
+   - AI presents tomorrow's view
+   - AI suggests evening preparation
 
-## Desarrollo
+## Development
 
-### Estructura del Proyecto
+### Project Structure
 
 ```
 clical/
 ├── cmd/clical/       # Entry point
-├── pkg/              # Paquetes públicos
-│   ├── calendar/     # Modelos Entry, Filter
-│   ├── storage/      # Storage filesystem
+├── pkg/              # Public packages
+│   ├── calendar/     # Entry, Filter models
+│   ├── storage/      # Filesystem storage
 │   ├── user/         # User management
 │   └── reporter/     # Report generation
-├── internal/         # Paquetes privados
-│   ├── cli/          # Comandos Cobra
-│   └── config/       # Configuración
-├── ai/               # Documentación de desarrollo
-│   ├── specs/        # Especificaciones
-│   └── journal/      # Journal de desarrollo
-└── docs/             # Documentación web
+├── internal/         # Private packages
+│   ├── cli/          # Cobra commands
+│   └── config/       # Configuration
+├── ai/               # Development docs
+│   ├── specs/        # Specifications
+│   └── journal/      # Development journal
+└── docs/             # Web documentation
 ```
 
-### Compilar
+### Build
 
 ```bash
 make build
@@ -310,25 +312,25 @@ make build
 make test
 ```
 
-### Formatear código
+### Format code
 
 ```bash
 make fmt
 ```
 
-## Contribuir
+## Contributing
 
-Ver [ai/specs/00_Overview.md](ai/specs/00_Overview.md) para especificaciones completas.
+See [ai/specs/00_Overview.md](ai/specs/00_Overview.md) for full specifications.
 
-## Licencia
+## License
 
 MIT
 
-## Autor
+## Author
 
-Desarrollado por Sebastián Valencia con asistencia de Claude (Anthropic).
+Developed by Sebastián Valencia with Claude (Anthropic) assistance.
 
 ---
 
-**Versión:** 0.1.0
-**Estado:** MVP funcional - En desarrollo activo
+**Version:** 0.1.0
+**Status:** Working MVP - Under active development
