@@ -14,7 +14,7 @@
 
 ## Instalación
 
-### Desde código fuente
+### Desde código fuente (Linux / macOS)
 
 ```bash
 # Clonar repositorio
@@ -27,6 +27,24 @@ make build
 # Instalar en /usr/local/bin (opcional)
 make install-system
 ```
+
+### Desde código fuente (Windows)
+
+En Windows usá los scripts PowerShell equivalentes (no requieren `make`):
+
+```powershell
+git clone https://github.com/sebasvalencia/clical.git
+cd clical
+
+# Compilar (genera .\clical.exe)
+.\build.ps1
+
+# Instalar en %USERPROFILE%\go\bin (opcional)
+.\install.ps1
+```
+
+Para que el comando `clical` esté disponible en cualquier terminal, asegurate
+de que `%USERPROFILE%\go\bin` esté en tu `PATH` de usuario.
 
 ### Requisitos
 

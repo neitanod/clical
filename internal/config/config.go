@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -17,10 +18,30 @@ type Config struct {
 // DefaultConfig retorna la configuración por defecto
 func DefaultConfig() *Config {
 	return &Config{
-		DataDir:  "/var/clical/data",
+		DataDir:  DefaultDataDir(),
 		UserID:   "",
 		LogLevel: "info",
 	}
+}
+
+// DefaultDataDir retorna el directorio de datos por defecto (~/.clical/data),
+// independiente de plataforma. Si no se puede resolver el home, cae a ./.clical/data.
+func DefaultDataDir() string {
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		return filepath.Join(".clical", "data")
+	}
+	return filepath.Join(home, ".clical", "data")
+}
+
+// DefaultConfigPath retorna el path por defecto del archivo de configuración
+// (~/.clical/config.env). Si no se puede resolver el home, retorna "".
+func DefaultConfigPath() string {
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		return ""
+	}
+	return filepath.Join(home, ".clical", "config.env")
 }
 
 // LoadConfig carga la configuración desde archivo .env

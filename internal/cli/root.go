@@ -65,7 +65,7 @@ func Execute() error {
 
 func init() {
 	// Flags globales
-	rootCmd.PersistentFlags().StringVar(&configPath, "config", "/etc/clical/config.env", "Configuration file")
+	rootCmd.PersistentFlags().StringVar(&configPath, "config", config.DefaultConfigPath(), "Configuration file")
 	rootCmd.PersistentFlags().StringVar(&dataDir, "data-dir", "", "Data directory (overrides config)")
 	rootCmd.PersistentFlags().StringVar(&userID, "user", "", "User ID (overrides config)")
 
