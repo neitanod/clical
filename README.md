@@ -46,6 +46,16 @@ cd clical
 Para que el comando `clical` esté disponible en cualquier terminal, asegurate
 de que `%USERPROFILE%\go\bin` esté en tu `PATH` de usuario.
 
+### Instalación asistida por un agente de IA
+
+Si usás un agente con acceso a tu terminal (Claude Code, Cursor, etc.), podés
+instalar clical pegándole el siguiente prompt:
+
+<https://github.com/neitanod/clical/blob/main/install_prompt.md>
+
+El prompt guía al agente para detectar el sistema operativo, verificar
+requisitos, clonar, compilar e instalar tanto en Linux/macOS como en Windows.
+
 ### Requisitos
 
 - Go 1.23 o superior
