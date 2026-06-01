@@ -9,13 +9,20 @@ import (
 
 // Alarm representa una alarma
 type Alarm struct {
-	ID          string     `json:"id"`
-	Context     string     `json:"context"`
-	CreatedAt   time.Time  `json:"created_at"`
-	Recurrence  Recurrence `json:"recurrence"`
-	ExpiresAt   *time.Time `json:"expires_at,omitempty"`
-	ScheduledFor time.Time `json:"scheduled_for,omitempty"` // Solo para output
-	ExecutedAt  *time.Time `json:"executed_at,omitempty"`   // Solo para past alarms
+	ID           string        `json:"id"`
+	Context      string        `json:"context"`
+	CreatedAt    time.Time     `json:"created_at"`
+	Recurrence   Recurrence    `json:"recurrence"`
+	ExpiresAt    *time.Time    `json:"expires_at,omitempty"`
+	ScheduledFor time.Time     `json:"scheduled_for,omitempty"` // Solo para output
+	ExecutedAt   *time.Time    `json:"executed_at,omitempty"`   // Solo para past alarms
+	Schedule     *ScheduleInfo `json:"-"`                        // Metadata, no serializado
+}
+
+// ScheduleInfo contiene información de scheduling para alarmas recurrentes
+type ScheduleInfo struct {
+	Filename string    // Filename del archivo de alarma
+	NextRun  time.Time // Próxima ejecución calculada
 }
 
 // NewAlarm crea una nueva alarma
@@ -48,8 +55,8 @@ func (a *Alarm) Validate() error {
 		return fmt.Errorf("context is required")
 	}
 
-	if len(a.Context) > 500 {
-		return fmt.Errorf("context too long (max 500 characters)")
+	if len(a.Context) > 20000 {
+		return fmt.Errorf("context too long (max 20000 characters)")
 	}
 
 	if !a.Recurrence.Valid() {

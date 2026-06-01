@@ -471,7 +471,7 @@ type Storage interface {
 - `--monthly`: día del mes válido (1-31)
 - `--yearly`: fecha válida (MM-DD)
 - `--expires`: fecha futura (solo para recurrentes)
-- `--context`: no vacío, máximo 500 caracteres
+- `--context`: no vacío, máximo 20000 caracteres
 
 ### alarm-cancel
 

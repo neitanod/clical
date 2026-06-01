@@ -263,6 +263,15 @@ func (fs *FilesystemStorage) ListActiveAlarms(userID string) ([]*alarm.Alarm, er
 		if err != nil {
 			return nil, err
 		}
+		// Agregar schedule info para alarmas one-time
+		for _, alm := range alarms {
+			if nextRun, err := parseOneTimeFilename(filename); err == nil {
+				alm.Schedule = &alarm.ScheduleInfo{
+					Filename: filename,
+					NextRun:  nextRun,
+				}
+			}
+		}
 		result = append(result, alarms...)
 	}
 
@@ -285,6 +294,15 @@ func (fs *FilesystemStorage) ListActiveAlarms(userID string) ([]*alarm.Alarm, er
 			alarms, err := fs.GetAlarms(userID, rec, filename)
 			if err != nil {
 				return nil, err
+			}
+			// Agregar schedule info para alarmas recurrentes
+			for _, alm := range alarms {
+				if nextRun, err := calculateNextRun(rec, filename); err == nil {
+					alm.Schedule = &alarm.ScheduleInfo{
+						Filename: filename,
+						NextRun:  nextRun,
+					}
+				}
 			}
 			result = append(result, alarms...)
 		}
@@ -502,4 +520,164 @@ func extractUserIDFromPath(filePath string) string {
 		}
 	}
 	return ""
+}
+
+// parseOneTimeFilename parsea un filename de alarma one-time y retorna el tiempo
+// Formato: 2025-12-21_01-10-00.json
+func parseOneTimeFilename(filename string) (time.Time, error) {
+	// Remover extensión .json
+	filename = strings.TrimSuffix(filename, ".json")
+
+	// Parsear formato YYYY-MM-DD_HH-MM-SS
+	return time.ParseInLocation("2006-01-02_15-04-05", filename, time.Local)
+}
+
+// calculateNextRun calcula la próxima ejecución de una alarma recurrente basándose en su filename
+func calculateNextRun(recurrence alarm.Recurrence, filename string) (time.Time, error) {
+	// Remover extensión .json
+	filename = strings.TrimSuffix(filename, ".json")
+	now := time.Now()
+	loc := now.Location()
+
+	switch recurrence {
+	case alarm.RecurrenceDaily:
+		// Formato: 14-30-00.json
+		parts := strings.Split(filename, "-")
+		if len(parts) < 2 {
+			return time.Time{}, fmt.Errorf("invalid daily filename format")
+		}
+		hour, _ := time.Parse("15", parts[0])
+		minute, _ := time.Parse("04", parts[1])
+
+		h := hour.Hour()
+		m := minute.Minute()
+
+		// Calcular próxima ejecución (hoy o mañana)
+		nextRun := time.Date(now.Year(), now.Month(), now.Day(), h, m, 0, 0, loc)
+		if nextRun.Before(now) {
+			nextRun = nextRun.Add(24 * time.Hour)
+		}
+		return nextRun, nil
+
+	case alarm.RecurrenceWeekly:
+		// Formato: monday_14-30-00.json
+		parts := strings.Split(filename, "_")
+		if len(parts) < 2 {
+			return time.Time{}, fmt.Errorf("invalid weekly filename format")
+		}
+
+		weekdayStr := parts[0]
+		timeParts := strings.Split(parts[1], "-")
+		if len(timeParts) < 2 {
+			return time.Time{}, fmt.Errorf("invalid weekly time format")
+		}
+
+		// Parsear weekday
+		var targetWeekday time.Weekday
+		switch strings.ToLower(weekdayStr) {
+		case "sunday":
+			targetWeekday = time.Sunday
+		case "monday":
+			targetWeekday = time.Monday
+		case "tuesday":
+			targetWeekday = time.Tuesday
+		case "wednesday":
+			targetWeekday = time.Wednesday
+		case "thursday":
+			targetWeekday = time.Thursday
+		case "friday":
+			targetWeekday = time.Friday
+		case "saturday":
+			targetWeekday = time.Saturday
+		default:
+			return time.Time{}, fmt.Errorf("invalid weekday: %s", weekdayStr)
+		}
+
+		hour, _ := time.Parse("15", timeParts[0])
+		minute, _ := time.Parse("04", timeParts[1])
+		h := hour.Hour()
+		m := minute.Minute()
+
+		// Calcular días hasta el próximo weekday
+		daysUntil := int(targetWeekday - now.Weekday())
+		if daysUntil < 0 {
+			daysUntil += 7
+		}
+		if daysUntil == 0 {
+			// Es hoy, verificar si ya pasó la hora
+			todayTime := time.Date(now.Year(), now.Month(), now.Day(), h, m, 0, 0, loc)
+			if todayTime.Before(now) {
+				daysUntil = 7
+			}
+		}
+
+		nextRun := time.Date(now.Year(), now.Month(), now.Day(), h, m, 0, 0, loc).Add(time.Duration(daysUntil) * 24 * time.Hour)
+		return nextRun, nil
+
+	case alarm.RecurrenceMonthly:
+		// Formato: 15_14-30-00.json (día del mes)
+		parts := strings.Split(filename, "_")
+		if len(parts) < 2 {
+			return time.Time{}, fmt.Errorf("invalid monthly filename format")
+		}
+
+		day, _ := time.Parse("02", parts[0])
+		timeParts := strings.Split(parts[1], "-")
+		if len(timeParts) < 2 {
+			return time.Time{}, fmt.Errorf("invalid monthly time format")
+		}
+
+		hour, _ := time.Parse("15", timeParts[0])
+		minute, _ := time.Parse("04", timeParts[1])
+
+		d := day.Day()
+		h := hour.Hour()
+		m := minute.Minute()
+
+		// Próxima ocurrencia este mes o siguiente
+		nextRun := time.Date(now.Year(), now.Month(), d, h, m, 0, 0, loc)
+		if nextRun.Before(now) {
+			// Siguiente mes
+			nextRun = time.Date(now.Year(), now.Month()+1, d, h, m, 0, 0, loc)
+		}
+		return nextRun, nil
+
+	case alarm.RecurrenceYearly:
+		// Formato: 11-21_14-30-00.json (mes-día)
+		parts := strings.Split(filename, "_")
+		if len(parts) < 2 {
+			return time.Time{}, fmt.Errorf("invalid yearly filename format")
+		}
+
+		dateParts := strings.Split(parts[0], "-")
+		if len(dateParts) < 2 {
+			return time.Time{}, fmt.Errorf("invalid yearly date format")
+		}
+
+		month, _ := time.Parse("01", dateParts[0])
+		day, _ := time.Parse("02", dateParts[1])
+
+		timeParts := strings.Split(parts[1], "-")
+		if len(timeParts) < 2 {
+			return time.Time{}, fmt.Errorf("invalid yearly time format")
+		}
+
+		hour, _ := time.Parse("15", timeParts[0])
+		minute, _ := time.Parse("04", timeParts[1])
+
+		mo := month.Month()
+		d := day.Day()
+		h := hour.Hour()
+		m := minute.Minute()
+
+		// Próxima ocurrencia este año o siguiente
+		nextRun := time.Date(now.Year(), mo, d, h, m, 0, 0, loc)
+		if nextRun.Before(now) {
+			// Siguiente año
+			nextRun = time.Date(now.Year()+1, mo, d, h, m, 0, 0, loc)
+		}
+		return nextRun, nil
+	}
+
+	return time.Time{}, fmt.Errorf("unsupported recurrence type: %s", recurrence)
 }

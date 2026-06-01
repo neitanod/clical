@@ -1,9 +1,11 @@
 package cli
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -86,7 +88,8 @@ func addOneTimeAlarm(userID, atStr, context string) error {
 	// Parse date/time
 	alarmTime, err := parseDateTime(atStr)
 	if err != nil {
-		return fmt.Errorf("error parsing --at: %w", err)
+		printRedError("error parsing --at: %v", err)
+		os.Exit(1)
 	}
 
 	// Verify it's in the future
@@ -355,6 +358,7 @@ func addYearlyAlarm(userID, scheduleStr, context, expiresStr string) error {
 var (
 	alarmCheckVerbose bool
 	alarmCheckJSON    bool
+	alarmCheckExecute string
 )
 
 var alarmCheckCmd = &cobra.Command{
@@ -369,7 +373,9 @@ If no alarms, produces no output (silent).
 Examples:
   clical alarm check --user alice
   clical alarm check --user alice --verbose
-  clical alarm check --user alice --json`,
+  clical alarm check --user alice --json
+  clical alarm check --user alice --execute="/path/to/script.sh"
+  clical alarm check --user alice --execute="gobot send text"`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if userID == "" {
 			return fmt.Errorf("--user is required")
@@ -388,6 +394,15 @@ Examples:
 				fmt.Fprintf(cmd.ErrOrStderr(), "No alarms to execute at this time\n")
 			}
 			return nil
+		}
+
+		// Ejecutar script externo si se especificó --execute
+		if alarmCheckExecute != "" {
+			for _, alm := range alarms {
+				if err := executeAlarmScript(alarmCheckExecute, alm, alarmCheckVerbose); err != nil {
+					fmt.Fprintf(cmd.ErrOrStderr(), "Warning: script execution failed for alarm %s: %v\n", alm.ID, err)
+				}
+			}
 		}
 
 		// Output en JSON o texto
@@ -431,6 +446,51 @@ func capitalizeRecurrence(r alarm.Recurrence) string {
 	default:
 		return string(r)
 	}
+}
+
+// executeAlarmScript ejecuta un script o comando para una alarma
+// Soporta dos modos:
+// 1. Ruta a script: /path/to/script.sh (recibe contexto como $1 y JSON por stdin)
+// 2. Comando directo: "gobot send text" (recibe contexto como $1, JSON via stdin)
+func executeAlarmScript(scriptOrCmd string, alm *alarm.Alarm, verbose bool) error {
+	// Serializar alarma a JSON para stdin
+	jsonData, err := json.Marshal(alm)
+	if err != nil {
+		return fmt.Errorf("error serializing alarm: %w", err)
+	}
+
+	var cmd *exec.Cmd
+
+	// Verificar si es una ruta de archivo existente
+	if _, err := os.Stat(scriptOrCmd); err == nil {
+		// Modo 1: Script ejecutable
+		if verbose {
+			fmt.Fprintf(os.Stderr, "Executing script: %s \"%s\"\n", scriptOrCmd, alm.Context)
+		}
+		cmd = exec.Command(scriptOrCmd, alm.Context)
+	} else {
+		// Modo 2: Comando shell con argumentos
+		// Expandir el comando agregando el contexto como argumento final
+		fullCmd := fmt.Sprintf("%s '%s'", scriptOrCmd, strings.ReplaceAll(alm.Context, "'", "'\\''"))
+		if verbose {
+			fmt.Fprintf(os.Stderr, "Executing command: %s\n", fullCmd)
+		}
+		cmd = exec.Command("sh", "-c", fullCmd)
+	}
+
+	// Pasar JSON por stdin
+	cmd.Stdin = bytes.NewReader(jsonData)
+
+	// Redirigir stdout y stderr del script/comando directamente al proceso padre
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	// Ejecutar
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("execution failed: %w", err)
+	}
+
+	return nil
 }
 
 // alarm-list
@@ -533,23 +593,39 @@ Examples:
 }
 
 func formatSchedule(alm *alarm.Alarm) string {
-	// Esto es una simplificación - en producción parsearíamos el filename
+	// Si tiene información de Schedule, usarla
+	if alm.Schedule != nil && !alm.Schedule.NextRun.IsZero() {
+		now := time.Now()
+		nextRun := alm.Schedule.NextRun
+
+		// Calcular cuándo es "next run" en formato amigable
+		diff := nextRun.Sub(now)
+		days := int(diff.Hours() / 24)
+
+		if days == 0 {
+			// Es hoy
+			return fmt.Sprintf("Today %s", nextRun.Format("15:04"))
+		} else if days == 1 {
+			// Es mañana
+			return fmt.Sprintf("Tomorrow %s", nextRun.Format("15:04"))
+		} else if days < 7 {
+			// Esta semana
+			return fmt.Sprintf("%s %s", nextRun.Format("Monday"), nextRun.Format("15:04"))
+		} else {
+			// Fecha completa
+			return nextRun.Format("2006-01-02 15:04")
+		}
+	}
+
+	// Fallback para alarmas sin Schedule info
 	switch alm.Recurrence {
 	case alarm.RecurrenceOnce:
 		if !alm.ScheduledFor.IsZero() {
 			return alm.ScheduledFor.Format("2006-01-02 15:04")
 		}
 		return "pending"
-	case alarm.RecurrenceDaily:
-		return "daily (ver filename)"
-	case alarm.RecurrenceWeekly:
-		return "weekly (ver filename)"
-	case alarm.RecurrenceMonthly:
-		return "monthly (ver filename)"
-	case alarm.RecurrenceYearly:
-		return "yearly (ver filename)"
 	default:
-		return "unknown"
+		return fmt.Sprintf("%s (no schedule)", alm.Recurrence)
 	}
 }
 
@@ -580,6 +656,94 @@ Examples:
 	},
 }
 
+// alarm-details
+var alarmDetailsCmd = &cobra.Command{
+	Use:   "details --id ALARM_ID",
+	Short: "Show detailed information about an alarm",
+	Long: `Show detailed information about a specific alarm including its schedule,
+recurrence pattern, creation date, and expiration (if applicable).
+
+Examples:
+  clical alarm details --user alice --id alarm_once_1234567890_abcd1234
+  clical alarm details --user alice --id alarm_weekly_1234567890_abcd1234`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if userID == "" {
+			return fmt.Errorf("--user is required")
+		}
+
+		alarmDetailsID := cmd.Flag("id").Value.String()
+		if alarmDetailsID == "" {
+			return fmt.Errorf("--id is required")
+		}
+
+		// Buscar la alarma en las activas
+		activeAlarms, err := store.ListActiveAlarms(userID)
+		if err != nil {
+			return fmt.Errorf("error listing alarms: %w", err)
+		}
+
+		var foundAlarm *alarm.Alarm
+		for _, alm := range activeAlarms {
+			if alm.ID == alarmDetailsID {
+				foundAlarm = alm
+				break
+			}
+		}
+
+		if foundAlarm == nil {
+			return fmt.Errorf("alarm not found: %s", alarmDetailsID)
+		}
+
+		// Mostrar detalles
+		fmt.Printf("ALARM DETAILS\n")
+		fmt.Printf("═════════════\n\n")
+		fmt.Printf("ID:          %s\n", foundAlarm.ID)
+		fmt.Printf("Context:     %s\n", foundAlarm.Context)
+		fmt.Printf("Type:        %s\n", capitalizeRecurrence(foundAlarm.Recurrence))
+		fmt.Printf("Created:     %s\n", foundAlarm.CreatedAt.Format("2006-01-02 15:04:05"))
+
+		if foundAlarm.Schedule != nil {
+			fmt.Printf("\nSCHEDULE\n")
+			fmt.Printf("────────\n")
+			fmt.Printf("Filename:    %s\n", foundAlarm.Schedule.Filename)
+			if !foundAlarm.Schedule.NextRun.IsZero() {
+				fmt.Printf("Next run:    %s\n", foundAlarm.Schedule.NextRun.Format("2006-01-02 15:04:05 (Monday)"))
+
+				// Calcular tiempo hasta próxima ejecución
+				now := time.Now()
+				diff := foundAlarm.Schedule.NextRun.Sub(now)
+				if diff > 0 {
+					hours := int(diff.Hours())
+					minutes := int(diff.Minutes()) % 60
+					if hours < 24 {
+						fmt.Printf("Time until:  %dh %dm\n", hours, minutes)
+					} else {
+						days := hours / 24
+						remainingHours := hours % 24
+						fmt.Printf("Time until:  %dd %dh %dm\n", days, remainingHours, minutes)
+					}
+				}
+			}
+		}
+
+		if foundAlarm.ExpiresAt != nil {
+			fmt.Printf("\nEXPIRATION\n")
+			fmt.Printf("──────────\n")
+			fmt.Printf("Expires at:  %s\n", foundAlarm.ExpiresAt.Format("2006-01-02 15:04:05"))
+
+			// Verificar si ya expiró
+			if foundAlarm.IsExpired() {
+				fmt.Printf("Status:      ⚠️  EXPIRED\n")
+			} else {
+				fmt.Printf("Status:      Active\n")
+			}
+		}
+
+		fmt.Println()
+		return nil
+	},
+}
+
 func init() {
 	// alarm add
 	alarmAddCmd.Flags().StringVar(&alarmContext, "context", "", "Alarm context (required)")
@@ -593,14 +757,20 @@ func init() {
 	// alarm check
 	alarmCheckCmd.Flags().BoolVarP(&alarmCheckVerbose, "verbose", "v", false, "Show debugging logs")
 	alarmCheckCmd.Flags().BoolVar(&alarmCheckJSON, "json", false, "Output in JSON format")
+	alarmCheckCmd.Flags().StringVar(&alarmCheckExecute, "execute", "", "Execute script/command for each alarm (script path or command with args)")
 
 	// alarm list
 	alarmListCmd.Flags().BoolVar(&alarmListPast, "past", false, "Include past alarms")
 	alarmListCmd.Flags().BoolVar(&alarmListJSON, "json", false, "Output en formato JSON")
+
+	// alarm details
+	alarmDetailsCmd.Flags().String("id", "", "Alarm ID (required)")
+	alarmDetailsCmd.MarkFlagRequired("id")
 
 	// Add subcommands
 	alarmCmd.AddCommand(alarmAddCmd)
 	alarmCmd.AddCommand(alarmCheckCmd)
 	alarmCmd.AddCommand(alarmListCmd)
 	alarmCmd.AddCommand(alarmCancelCmd)
+	alarmCmd.AddCommand(alarmDetailsCmd)
 }

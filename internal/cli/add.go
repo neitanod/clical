@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -84,17 +85,57 @@ func init() {
 	addCmd.MarkFlagRequired("title")
 }
 
-// parseDateTime parses a date/time in "YYYY-MM-DD HH:MM" format
+// parseDateTime parses a date/time in multiple formats:
+// - Relative: "+5m" (5 minutes), "+2h" (2 hours), "+1d" (1 day)
+// - Absolute: "YYYY-MM-DD HH:MM", "YYYY-MM-DDTHH:MM"
+// - Keywords: "tomorrow HH:MM"
 func parseDateTime(s string) (time.Time, error) {
+	s = strings.TrimSpace(s)
+	now := time.Now()
+	loc := now.Location()
+
+	// Try relative time formats: +5m, +2h, +1d
+	if strings.HasPrefix(s, "+") {
+		value := s[1:len(s)-1]
+		unit := s[len(s)-1:]
+
+		duration, err := strconv.Atoi(value)
+		if err == nil {
+			switch unit {
+			case "m":
+				return now.Add(time.Duration(duration) * time.Minute), nil
+			case "h":
+				return now.Add(time.Duration(duration) * time.Hour), nil
+			case "d":
+				return now.Add(time.Duration(duration) * 24 * time.Hour), nil
+			}
+		}
+	}
+
+	// Try "tomorrow HH:MM" format
+	if strings.HasPrefix(strings.ToLower(s), "tomorrow ") {
+		timeStr := strings.TrimPrefix(strings.ToLower(s), "tomorrow ")
+		timeStr = strings.TrimSpace(timeStr)
+
+		// Parse time part (HH:MM)
+		timeParts := strings.Split(timeStr, ":")
+		if len(timeParts) == 2 {
+			hour, err1 := strconv.Atoi(timeParts[0])
+			minute, err2 := strconv.Atoi(timeParts[1])
+			if err1 == nil && err2 == nil {
+				tomorrow := now.Add(24 * time.Hour)
+				return time.Date(tomorrow.Year(), tomorrow.Month(), tomorrow.Day(), hour, minute, 0, 0, loc), nil
+			}
+		}
+	}
+
+	// Try absolute formats
 	formats := []string{
 		"2006-01-02 15:04",
 		"2006-01-02T15:04",
 		"2006-01-02 15:04:05",
 		"2006-01-02T15:04:05",
 	}
-
-	// Use local timezone for parsing
-	loc := time.Now().Location()
 
 	for _, format := range formats {
 		t, err := time.ParseInLocation(format, s, loc)
@@ -103,5 +144,5 @@ func parseDateTime(s string) (time.Time, error) {
 		}
 	}
 
-	return time.Time{}, fmt.Errorf("invalid format (use YYYY-MM-DD HH:MM)")
+	return time.Time{}, fmt.Errorf("invalid format (use: YYYY-MM-DD HH:MM, +5m, +2h, tomorrow 10:00)")
 }
