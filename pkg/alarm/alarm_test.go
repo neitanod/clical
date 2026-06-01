@@ -86,7 +86,7 @@ func TestValidate(t *testing.T) {
 			name: "context too long",
 			alarm: &Alarm{
 				ID:         "alarm_test_004",
-				Context:    strings.Repeat("a", 501),
+				Context:    strings.Repeat("a", 20001),
 				CreatedAt:  time.Now(),
 				Recurrence: RecurrenceOnce,
 			},
